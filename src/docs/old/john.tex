@@ -1,0 +1,188 @@
+
+% Some notes for John Dunlap, March 30, 2022.
+% I need to go back through past work, and see what's what. I know
+% that a lot of the things discussed here were talked about in vastly
+% greater detail at an earler point. John isn't very familiar with 3D
+% graphics. Writing something for him also helps me get my mind
+% back in this particular game.
+
+\documentclass[titlepage,oneside,10pt]{article}
+
+% Need this for pmatrix (among other things).
+\usepackage{amsmath}
+
+% Needed to include graphics objects (from metapost).
+%\usepackage{graphics}
+
+\begin{document}
+
+\raggedbottom
+
+% These are for marginal notes on the right or left of the main text.
+\newcommand{\mymargin}[1]{\marginpar{\rm\tiny #1}}
+%\newcommand{\mymargin}[1]{\marginpar{\rm\scriptsize #1}}
+\newcommand{\leftmar}[1]{\reversemarginpar \mymargin{#1}}
+
+
+\section{Overview}
+
+There are two main approaches to 3D modeling: parametric methods and
+mesh methods. NURBS and patches are examples of parametric methods,
+and triangulation is the basic method used for meshes. Parametric
+methods amount to finding formulas that describe the surface. For
+various reasons, I think that the parametric approach is too
+difficult.
+
+Below is an overview of some approaches to the mesh method. For
+simplicity, assume that the mesh consists of triangles, and that the
+vertices of the triangles are all on a lattice of points in 3D. Imagine
+a set of equally spaced dots in 3D, and any vertex must be one of
+these dots. This assumption will make it easier to get some ballpark
+numbers on memory and speed. In practice, it may or may not make sense
+to be more flexible about the location of vertices; there are
+advantages either way.
+
+For reference, I'll come back to three cases.
+\begin{itemize}
+\itemsep=0pt
+\item[(1)] Vertices at $2^6 = 64$ per inch. It seems like this is about the
+  smallest number of vertices that would give an acceptable level of
+  detail. Each square inch of surface requires (roughly) $2^6\times
+  2^6\times 2 = 2^{13} = 8,192$  triangles.
+\item[(2)] Vertices at $2^8=256$ per inch. This puts the vertices as close as
+  $0.004$~inch, which seems like the most that could be genuinely
+  necessary to properly visualize a model. Each square inch uses
+  $2^{17} \approx 130,000$ triangles.
+\item[(3)] At the extreme, you could have $2^{10} =1024$ vertices per inch,
+  in which case there would be $2^{21} \approx 2,000,000$ triangles
+  per square inch.  
+\end{itemize}
+Even in case (3), memory shouldn't be an issue. Suppose that each
+triangle takes 16 bytes (which includes some overhead
+for pointers and the like), you would need $2^{25}$ bytes per square
+inch. A gigabyte is $2^{30}$, and could store $2^5 = 32$ square inches
+worth of triangles. The big hurdle isn't memory; it's processing time.
+In any case, I doubt that {\tt libgdx} can render multiple millions of triangles
+in real time.
+
+The motion of the tool must also be considered. In the first case,
+every inch of tool travel requires that we 
+consider $2^6$ tool positions; $2^8$ tools positions in the second
+case; and $2^{10}$ tool positions in the third case. For the sake of
+argument, assume that a typical program involves $2^7$ inches of
+travel where the tool is cutting. A particular program could easily
+involve less travel, but a program that has (say) $2^{10}$ inches of
+tool travel would take \emph{at least} an hour to run in the real world, 
+and probably several hours. For each of the three cases above, the number of
+tool positions to consider for a typical program is
+\begin{itemize}
+\itemsep=0pt
+\item[(1)] $2^6\times 2^7 = 2^{13} = 8,192$ tool positions.
+\item[(2)] $2^8\times 2^7 = 2^{15} = 32,768$ tool positions.
+\item[(3)] $2^{10}\times 2^7 = 2^{17} \approx 130,000$ tool positions.
+\end{itemize}
+Again, a particlarly long program might have more tool travel, maybe 8
+times as much, but this is a reasonable reference case.
+
+Overall, case (2) seems like the one to focus on. It might be too
+ambitious, but it would certainly be a nice outcome. Also assume that
+the surface area is $2^8$ square inches. Here, I'm thinking of the
+surface area that will be cut -- the area where the triangles are
+represent something other than (say) the uniformly flat top and bottom
+of the raw material. For case (2), this means that there are 
+$2^{17}\times 2^8 = 2^{25}$ triangles that need to be considered as
+the calculation proceeds. This is probably on the high end, and there
+may only be $2^{22}$ triangles to consider, but it's better to be
+conservative. 
+
+\section{Crude Estimate}
+
+As the tool moves through the material, we need to update the set of
+triangles that specify the surface. At each tool position, the program
+must look at the existing set of triangles, see which ones are cut by
+the tool and adjust the set of triangles accordingly. In some cases,
+we could ``combine cuts'' to reduce the amount of checking required,
+but the user is likely to want to see the tool motion and the model as
+the cutting happens, and not just a final static representation of the
+result. 
+
+In case (2), we said that there are $2^{15}$ tool positions. For each
+of these we must examine $2^{25}$ triangles to see which ones
+intersect the tool and must be adjusted. If we just cycle through the
+list of triangles, considering each one, that's 
+$2^{15}\times 2^{25} = 2^{40}$ tests -- which is \emph{crazy},
+particularly since the test itself is fairly complicated.
+
+This checking is only possible if we can eliminate large numbers of
+triangles from consideration with a single test. One way to do
+that is with an octree. An octree is a tree where each node has eight
+sub-nodes. Thinking in terms of 3D geometry, a cube of size $s$ is
+divided into eight cubes of size $s/2$, and each cube is either solid,
+empty, or partially solid. I did something like that in an earlier
+version of the program. In that version, I used an octree to represent
+the volume of the part as a bunch of little cubes. I'm talking about
+something slightly different here.
+
+Use the octree to partition the triangles so that they can be quickly
+searched. For each tool position, we want to know which triangles are
+cut by the tool. Put the triangles in an octree according to where
+they fall in 3D space. Moving from one layer of the octree to a
+deeper layer reduces the number of triangles by a factor of $2^3$. So,
+with 9 layers, you would have a tree with space for $2^{9\times 3} =
+2^{27}$ lone triangles at the leaves. Put another way, we could
+determine determine which triangle (if any) appears at a given
+location with no more than 9 steps of tree navigation. We just went
+from $2^{25}$ to 9. It's not quite that simple, but it's still a nice
+savings.\footnote{With a BSP (binary space partiction) it would be
+that simple, but that's a messier data structure with other
+shortcomings. With an octree, the tree will typically be deeper,
+depending on how the triangles are distributed.} To be conservative,
+say that $2^4=16$ steps of tree navigation are required.
+
+Going back to the big picture, each of the $2^{15}$ tool positions
+requires a ``triangle examination.'' That is, we need to determine
+which triangles are cut by the tool. Suppose that the tool is cutting
+along a one inch height. Leaving aside the cutting action happening
+ahead of the tool, and only considering the cutting happening along
+the sides, there are $2^8$ vertical positions of the cutter to be
+considered -- remember, we're in case (2). For each of these $2^8$
+positions that could be cutting away material, we need to do a search
+of the octree for potentially cut triangles. So, the total number of
+operations is now $2^{15}$ (the set of tool positions), times $2^8$ (the
+tool edge), times $2^4$ (for octree search), for a total of
+$2^{27}$. 
+
+This oversimplifies on several counts. First, we need to consider
+triangles that are \emph{inside} the cutter, not just near the edge of
+the cutter. Second, it ignores the cutting happening on the forward
+side of the tool as it moves. And these operations are more
+complicated than simple arithmetic operations. Even so, we're in the
+ballpark of the possible.
+
+Going to case (3) is unlikely to be in the ballpark of the possible since
+you'd have $2^{17}$ tool positions and the cutter would be $2^{10}$
+units tall, and the number of triangles to search would be larger so
+that the octree would take $2^5$ (or maybe $2^6$) steps to
+navigate. This is $2^{17+10+5} = 2^{32}$ highly non-trivial
+operations and, as noted, it's an oversimplification.
+
+If we back way off and reduce our goals to case (1), that's only
+$2^{13}$ tool positions, times a cutter $2^6$ tall and (being
+conservative) $2^4$ steps for octree search, for a total of $2^{23}$
+operations.
+
+This is a gross oversimplification of what's going on and the
+complexities involved, but it gives a feeling for the
+limitations. No doubt there are ways to speed up and improve the
+approach outlined above, maybe in a big way, but speed-ups that
+totally change the ballpark seem unlikely. 
+
+
+
+
+
+
+
+
+
+\end{document}

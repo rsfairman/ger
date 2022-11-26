@@ -1,0 +1,221 @@
+
+\documentclass[titlepage,oneside,10pt]{article}
+
+% So that I don't have to type this all the time.
+\newcommand{\ger}{\textsc{Ger}}
+
+% Need this for pmatrix (among other things).
+\usepackage{amsmath}
+
+% Needed to include graphics objects (from metapost).
+\usepackage{graphics}
+
+\usepackage{epic,eepic} \setlength\maxovaldiam{60pt}
+
+% For ``long'' tables.
+\usepackage{longtable}
+
+% To make a short hrule as a divider between things that aren't quite
+% worthy of being sections. The \vskip 0mm is to put tex into vertical
+% mode. For some reason, it seems to put a little extra space above
+% the hrule -- probably because it's relative to the baseline of the text.
+%\newlength{\rulewidth}
+%\newcommand\mtrule{\hrule width \rulewidth}
+%\newcommand\setrulewidth[1]{\setlength{\rulewidth}{#1}}
+\newcommand\rulediv{\vskip 0mm\hfil\rule{0.4\textwidth}{0.4pt}\hfil\vskip 1mm}
+
+
+\begin{document}
+
+\raggedbottom
+
+% These are for marginal notes on the right or left of the main text.
+\newcommand{\mymargin}[1]{\marginpar{\rm\tiny #1}}
+%\newcommand{\mymargin}[1]{\marginpar{\rm\scriptsize #1}}
+\newcommand{\leftmar}[1]{\reversemarginpar \mymargin{#1}}
+
+This is a manual for developers.
+There are two aspects to the code: the user-interface and the G-code
+translator. The UI is basically how Swing is used, plus the plumbing
+that holds the entire program together, while the translator
+is the central task the program is intended to accomplish.
+
+\section{User-interface and Plumbing}
+
+The entry point for the program is found in\footnote{``vcnc'' stands
+for ``Virtual CNC.''}
+\begin{verbatim}
+vcnc.Main
+\end{verbatim}
+There's not a lot to say about this class: it merely kicks off the entire
+program by creating a 
+\begin{verbatim}
+vcnc.MainWindow
+\end{verbatim}
+This is where all the plumbing comes together and is the primary
+window for user activity. Most of what happens in the class is
+standard stuff: menus, windows, \emph{etc}.
+
+This window puts each file in a tabbed frame. By default, Java's {\tt
+  JTabbedPane} doesn't have all the functionality desired, so there's
+a fair amount of UI code in the {\tt vcnc.ui.TabbedPaneDnD} package, which is
+discussed further below.
+
+\rulediv
+
+In addition, each tab shown has a type that corresponds to the
+contents of that tab. These types are managed by the {\tt
+  vcnc.ui.TabMgmt} package. What is does is simple.
+
+\begin{verbatim}
+vncc.ui.TabMgmt.TabbedType
+\end{verbatim}
+is an {\tt enum} listing the possible types of tab contents and
+\begin{verbatim}
+vncc.ui.TabMgmt.TypedDisplayItem
+\end{verbatim}
+is an interface that each tab {\tt Component} must implement to
+associate a type with its contents. Currently, all of these extend
+{\tt JScrollPane}, but any number of other {\tt awt.Component}
+objects would probably work as the base class.
+
+Currently, there are only three of these types:
+\begin{verbatim}
+vncc.ui.TabMgmt.GInputTab
+vncc.ui.TabMgmt.LexerTab
+vncc.ui.TabMgmt.ParserTab
+\end{verbatim}
+The {\tt LexerTab} and {\tt ParserTab} are essentially identical,
+\footnote{Clean that up.} and are used to display G-code output, which
+is not editable. The {\tt GInputTab} is a bit more complicated because
+this code is editable and due to toggling line numbers.
+
+The final class found in this package is 
+\begin{verbatim}
+vncc.ui.TabMgmt.StaticWindow
+\end{verbatim}
+which is used to convert a tab to an independant window whose contents
+can no longer be edited.\footnote{This is also similar to {\tt
+  LexerTab} and {\tt ParserTab}.}
+
+\rulediv
+
+The remaining files in the {\tt vcnc} package are 
+
+\begin{verbatim}
+vcnc.MachineGlobals
+vcnc.TextInputDialog
+vcnc.TableMenu
+\end{verbatim}
+{\tt MachineGlobals} consists of the top-level machine state. This
+should be combined with {\tt vcnc.transpile.MachineState} somehow...
+
+The {\tt TextInputDialog} class is currently used to set the material
+billet, but it's not being done in the way that it ultimately should
+be done.
+
+{\tt vcnc.TableMain} is leftover junk -- test code for {\tt
+  JTables}. Get rid of it.
+
+\rulediv
+
+TALK ABOUT HOW THE MAIN WINDOW INVOKES THE UNDERLYING TRANSLATOR.
+
+\subsection{{\tt vcnc.ui.TabbedPaneDnD} Package}
+
+Two features beyond those provided by {\tt JTabbedPane}
+are added: an ``X'' to close the tabs, and the ability to drag and
+drop the tabs within each window or from one window to another. The
+close-box is managed (mostly) through {\tt ButtonTabComponent}, and
+the remaining classes manage drag \& drop, with {\tt TabbedpaneDnD}
+being the main class of interest externally. See\footnote{I wrote this
+ages ago, and it seems to work, but it's not pretty. I need to rewrite
+it, make it more of a stand-alone thing that is useful more generally
+and provide better documentation for it. It's messy Swing, so I'm
+putting it off. }
+\begin{verbatim}
+vcnc.ui.TabbedPaneDnD.ButtonTabComponent
+vcnc.ui.TabbedPaneDnD.GhostGlassPane
+vcnc.ui.TabbedPaneDnD.TabbedPaneDnD
+vcnc.ui.TabbedPaneDnD.TabDragGestureListener
+vcnc.ui.TabbedPaneDnD.TabDragSourceListener
+vcnc.ui.TabbedPaneDnD.TabDropTargetListener
+vcnc.ui.TabbedPaneDnD.TabTransferable
+vcnc.ui.TabbedPaneDnD.TabTransferPacket
+\end{verbatim}
+
+\subsection{Miscellany in the {\tt vcnc.util} Package}
+
+\begin{verbatim}
+vcnc.util.ClickListener
+vcnc.util.EmptyReadException
+vcnc.util.FileIOUtil
+vcnc.util.LoadOrSaveDialog
+vcnc.util.StringUtil
+\end{verbatim}
+
+Not much to say about these...{\tt ClickListener} may be trash, and
+they could all be tidied up with unused stuff taken out. They're
+mostly older code pulled from other projects.
+
+\begin{verbatim}
+\end{verbatim}
+\begin{verbatim}
+\end{verbatim}
+\begin{verbatim}
+\end{verbatim}
+
+\section{G-code Translator}
+
+\ger\ is similar to a (very simple) compiler. It converts an input
+file of G-code to a simpler from. This simplification happens as the
+code passes through a series of layers, where each layer handles a
+particular aspect of the simplification.
+
+The lowest layer is the lexical analyizer (or ``lexer''). Because
+G-code is so simple, with very little context-dependence, the lexer is
+equally simple. It converts the incoming text file to a stream of {\tt
+  Token} objects. Each token represents one of the letter codes (G, M,
+I, J, \emph{etc}.) and any associated value. \ger\ allows the user to
+extend ordinary G-code with user-defined functions, and these
+functions are also converted to {\tt Token} objects.
+
+The {\tt Token} objects are passed to the next layer, which is the
+parser. The parser assembles the tokens into {\tt Statement}
+objects. These statements correspond to the individual conceptual
+steps of the program. The remaining layers convert these statements
+into an increasingly stripped-down subset of the possible
+G-codes, ultimately producing nothing but {\tt G00, G01, G02, G03}
+codes for moving the cutter, plus a few M-codes and other codes that
+pass through the process untouched.
+
+The remaining layers are where the meat of the simplification
+occurs. By layering the simplification process in this way, each layer
+is made easier to understand. These layers are given numbers, starting
+with {\tt 00}.
+
+\subsection{\tt Layer00}
+
+This layer eliminates all calls to subroutines. In particular, {\tt
+  M98} (call subprogram) and {\tt M99} (return from subprogram) are
+replaced by the code of the corresponding subprogram(s).
+
+IN ADDITION, this also eliminates certain items that serve no purpose
+in a simulator, like {\tt M07, M09} and {\tt M09} for coolant
+control, together with {\tt M40} and {\tt M41} for spindle high/low
+and {\tt M48} and {\tt M49} for feed and speed overrides.
+
+For several other commands, it's not clear what the appropriate action
+should be, so they are treated as a ``halt.'' These codes are {\tt
+  M00, M01} and {\tt M02} (various forms of ``stop''), along with {\tt
+  M47} (repeat program).
+
+BUG: I suspect that some of these should pass all the way through the
+program, and only be dropped at the very end, when rendering.
+
+
+
+
+
+
+\end{document}
