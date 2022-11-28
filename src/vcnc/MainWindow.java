@@ -41,9 +41,11 @@ import vcnc.ui.TabMgmt.TypedDisplayItem;
 import vcnc.ui.TabbedPaneDnD.TabbedPaneDnD;
 import vcnc.util.FileIOUtil;
 import vcnc.util.LoadOrSaveDialog;
+import vcnc.util.ChoiceDialogRadio;
 import vcnc.lex.Lexer;
 import vcnc.lex.Token;
 
+import vcnc.transpile.MachineState;
 import vcnc.transpile.TextBuffer;
 import vcnc.transpile.Translator;
 
@@ -171,6 +173,10 @@ public class MainWindow extends JFrame
   private void doTestLexer() throws OutOfMemoryError {
   	
   	// Run the lexer, and display the tokens in a new tab.
+    // BUG: This shouldn't appear in production -- or probably not. Very few
+    // users will care about this. OTOH, it might help them to understand
+    // why their program fails and debug the problem, just like the output 
+    // of the other layers.
     
     int curTabIndex = theTabs.getSelectedIndex();
     if (curTabIndex < 0)
@@ -189,6 +195,9 @@ public class MainWindow extends JFrame
     
   	StringBuffer theBuffer = new StringBuffer();
   	
+  	// BUG: I think I got rid of the possibility of an exception here.
+  	// No longer need try/catch.
+  	
   	try {
   	  Lexer theLexer = new Lexer(theText);
   	  Token tok = theLexer.getToken();
@@ -202,6 +211,8 @@ public class MainWindow extends JFrame
   	      // Errors only:
 //          if (tok.error != null)
 //            theBuffer.append(tok.error+ "\n");
+  	      
+  	      // BUG: Use Token.toString() instead.
   	      
   	      theBuffer.append(tok.lineNumber+ "\t");
   	      
@@ -399,6 +410,10 @@ public class MainWindow extends JFrame
     //
     // BUG: For historical reasons, the numbers are messed up.
     // Do Lexer, then Parser, then LayerPre, then Layer00, etc.
+    // BUG: Rename so that LayerPre becomes Layer00, and then bump up the
+    // other layer numbers. This will require editing comments.
+    // Maybe better to name the layers somehow: LayerWiz, LayerUnits, etc.,
+    // but then it's not so obvious in what order they are invoked.
   	
     // Look at the top-most tab, but only use it if it's input G-code.
     int curTabIndex = theTabs.getSelectedIndex();
@@ -737,7 +752,7 @@ public class MainWindow extends JFrame
   	
   	// Bring up a table for work offsets. This is a JTable, something like the
     // one used for the tool table, but much simpler.
-  	WorkOffsetDialog theDialog = new WorkOffsetDialog(MachineGlobals.workOffsets);
+  	WorkOffsetDialog theDialog = new WorkOffsetDialog(MachineState.workOffsets);
   	theDialog.setVisible(true);
   }
   
@@ -833,7 +848,7 @@ public class MainWindow extends JFrame
 //    Z0 = Double.parseDouble(inputs[8]);
   }
   
-  /*
+  
   public void doInchOrMM() throws OutOfMemoryError {
   	
   	// Whether the rendering process works in inches or millimeters.
@@ -842,12 +857,12 @@ public class MainWindow extends JFrame
     choiceText[1] = "Use millimeters interally";
     
     int initial = 0;
-    if (this.inches == true)
+    if (MachineState.machineInchUnits == true)
     	initial = 0;
     else
     	initial = 1;
     
-    ChoiceDialogRadio choiceDialog = new ChoiceDialogRadio(choiceText,initial);
+    ChoiceDialogRadio choiceDialog = new ChoiceDialogRadio("Inches or mm?",choiceText,initial);
     int choice = choiceDialog.getChoice();
     
     if (choice == -1)
@@ -857,17 +872,18 @@ public class MainWindow extends JFrame
     if (choice == 0)
     	{
     		// Use inches
-    		this.inches = true;
-    		this.scale = 1000.0;
+    	  MachineState.machineInchUnits = true;
+//    		this.scale = 1000.0;
     	}
     else
     	{
     		// User chose millimeters.
-    		this.inches = false;
-    		this.scale = 40.0;
+    	  MachineState.machineInchUnits = false;
+//    		this.scale = 40.0;
     	}
   }
   
+  /*
   public void doScale() throws OutOfMemoryError {
   	
   	// Scaling factor on the rendering. Effectively, this is the resolution of
@@ -1009,8 +1025,8 @@ public class MainWindow extends JFrame
 //	  		doToolTable();
 	  	else if (e.getActionCommand().equals("Work Offsets"))
 	  		doWorkOffsets();
-//	  	else if (e.getActionCommand().equals("Inch/MM"))
-//	  		doInchOrMM();
+	  	else if (e.getActionCommand().equals("Inch/MM"))
+	  		doInchOrMM();
 //	  	else if (e.getActionCommand().equals("Scale"))
 //	  		doScale();
 	  	else if (e.getActionCommand().equals("Uncut Shape"))
@@ -1153,10 +1169,6 @@ public class MainWindow extends JFrame
     AllWindows.remove(this);
     
     this.dispose();
-    
-    // Note that if this was the last window closed, then program does quit.
-    // With no open windows, hence nothing happening in the Swing thread,
-    // there is nothing to keep it running.
   }
 
   

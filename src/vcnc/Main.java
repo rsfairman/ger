@@ -1,19 +1,46 @@
 package vcnc;
 
+//NEXT:
+//  
+//* Start with the lexer and work up to the last layer. As you reach things
+//  that need some kind of UI thing (like the tool table), write the
+//  necessary Swing.
+// don't forget to update the dev manual.
+//
+// I think the lexer is good...see about how to do unit tests...
+// 
+//* work offsets table and persistence framework
+
+
+
 /*
 12345678901234567890123456789012345678901234567890123456789012345678901234567890
 
-A revival of the vcnc program I worked on years ago. There's a summary of
-what went down in the earlier versions in lab.tex.
+Compiling
+
+Obviously, Eclipse is the easy way, with no additional tools needed.
+
+If the source files are organized in packages (in the usual way Eclipse does 
+it), then one can cd to the primary directory -- vcnc in my case, where there's
+a bin directory for the .class files and a src directory that contains the
+packages, with vcnc as the top-level package name. Then say
+
+javac -cp src -d bin src/vcnc/Main.java
+ 
+and it creates all the .class files, exactly as Eclipse would do.
+
 
 
 Version History
 
+v01
+
+A revival of the vcnc program I worked on years ago. There's a summary of
+what went down in the earlier versions in lab.tex.
+
 It appears from the comments in the Qt version that I did fix some non-trivial
 bugs in the original Java. It does not look like my intent was to do anything
 significantly different in the Qt version though.
-
-v01
 
 The initial goal is to implement the basic transpiler from "full" G-code to 
 G-code that consists of nothing but linear moves and circular arcs. What 
@@ -27,7 +54,6 @@ put everything in a distinct tab, and let the user break out the tabs
 into multiple columns if he likes. So, each tab (and its contents) can
 appear exactly once in the window. By default the window shows one set of
 tabs, but the user can drag tabs to the right to create another set of tabs.
-
 
 v02
 
@@ -62,6 +88,15 @@ v04
 
 The Swing aspect is far from done, but certain aspects are much cleaner,
 so I deleted various test files, particularly those in vcnc.ui.LineNumbers.
+I also removed the components package, which was just some junky example code
+from Oracle.
+
+Somehow I had two classes for global state variables. I got rid of 
+vcnc.MachineGlobals and folded it into vcnc.transpile.MachineState. 
+
+Added a unit test framework. It can be run from the main() method instead
+of launching the GUI.
+
 
 
 
@@ -180,6 +215,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import vcnc.unittest.UnitTests;
+
 
 public class Main {
 
@@ -202,9 +239,11 @@ public class Main {
     other.doOpen(dir,"layer05.txt");
   	
   }
-	  
-  public static void main(String[] args) {
 	
+  public static void guiMain() {
+    
+    // Run this normally.
+    
     /*
     It seems like the default ("Metal") L&F actually looks better,
     but that may have to do with the background colors I'm using.
@@ -233,15 +272,41 @@ public class Main {
     }
     */
     
-//	System.out.println("here");
-	
-  	SwingUtilities.invokeLater(new Runnable() {
-  			public void run() {
-  				createAndShowGUI();
+//  System.out.println("here");
+  
+    SwingUtilities.invokeLater(new Runnable() {
+        public void run() {
+          createAndShowGUI();
         }
       });
+  }
+
+  public static void testMain() {
+    
+    // To run the units tests.
+    // You can run any or all of these, and the test of each layer may
+    // consist of several individual tests.
+    UnitTests.testLexer();
+    
+    
+  }
+
+  public static void main(String[] args) {
+    
+    // There are two ways to run the program: normally, as a gui; or to
+    // do unit tests. Comment out one or the other.
+    // 
+    // It wouldn't be hard to take a command-line argument to do these
+    // tests, but it's more trouble than it's worth.
+    
+    // The usual way to run the program:
+//    guiMain();
+    
+    // Or, run a series of unit tests:
+    testMain();
 
   }
+  
 
 }
 

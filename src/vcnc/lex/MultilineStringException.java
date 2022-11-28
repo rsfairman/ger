@@ -2,11 +2,12 @@ package vcnc.lex;
 
 /*
 
-Used when a string runs beyond the EOL (or EOF).
+Used when a string runs beyond the EOL (or to EOF).
+
 */
 
 
-public class MultilineStringException extends Exception {
+class MultilineStringException extends Exception {
   
   public String msg = null;
 

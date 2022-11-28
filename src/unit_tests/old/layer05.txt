@@ -1,0 +1,213 @@
+(
+To test the Layer05 class, which is where cutter comp is handled.
+This is the most difficult layer, and is the most likely to have odd bugs.
+
+There are various permutations that must be tested:
+
+* Entering and leaving CC mode.
+* G41/G42, cutter comp left and right.
+* line-line, arc-line and arc-arc intersections when cutting on the inside.
+* line-line, arc-line and arc-arc *lack of* intersections when cutting on the outside.
+* arcs that do not make geometric sense because the center or radius is not possible
+  given the end-points.
+* G17/18/19 for the various planes. These only matter when dealing with arcs.
+)
+
+O123
+
+G01
+X0 Y0 Z0
+X1 Y1 Z1
+X0 Y0 Z0
+
+( Go around a rectangle, outside, CW )
+G41 D1 (cc left)
+Z0  (This is filtered out.)
+Y2
+X2
+Y1
+X2 (This is a monkey wrench. It should be filtered out and do nothing.)
+Z1
+G40
+
+( Go around a rectangle, outside, CCW )
+X0 Y0 Z1
+G42 D1 (cc right)
+Z0  (The tool plunges down at 0,0. I would prefer that the program look as far ahead as 
+    (necessary to see in what direction it will ultimately need to be offset, but this is 
+    (OK. The user should know enough to move the tool in the x,y plane.)
+X1
+Y1
+X0
+Y0
+Z1
+G40
+
+X1 Y1 Z1
+X0 Y0 Z0
+
+(The same two rectangles, but we cut on the inside.)
+
+( Going CW )
+G42 D1 (cc right)
+Z0  (This is filtered out.)
+Y2
+X2
+Y1
+X2 (This is a monkey wrench. It should be filtered out and do nothing.)
+Z1
+G40
+
+( Going CCW )
+X0 Y0 Z1
+G41 D1 (cc left)
+Z0  (Again, odd but acceptable behavior.)
+X1
+Y1
+X0
+Y0
+Z1
+G40
+
+X1 Y1 Z1
+X0 Y0
+
+(Test what happens in very tight interior angles. 
+ I expect that odd things will happen, and I don't plan on fixing it,
+ but I do want to know how the program behaves. 
+ 
+ First, even though it's less interesting, do the shape with the tool on the outside.)
+G41 D1
+X1 Y1 Z0
+X1.5 Y100
+X2.0 Y1
+X1 Y1
+Z1
+G40
+
+(Again, but with the tool on the inside. This is what really needs to be tested.)
+X1 Y1 Z1
+X0 Y0
+
+G42 D1
+X1 Y1 Z0
+X1.5 Y100
+X2.0 Y1
+X1 Y1
+Z1
+G40
+
+(One last test for linear moves: take the example above, and put a few tiny
+ moves up around the apex. It's going to act weird, but I want to know what it does.) 
+X1 Y1 Z1
+X0 Y0
+
+G42 D1
+X1 Y1 Z0
+X1.450 Y100
+X1.475 Y100
+X1.500 Y100
+X1.550 Y100
+X2.0 Y1
+X1 Y1
+Z1
+G40
+ 
+
+
+( IT LOOKS LIKE EVERYTHING WORKS WHEN DEALING WITH PURELY LINEAR MOVES.
+  Below, test line-arc and arc-arc moves. I'm doing both together.
+  This is messy and hard to visualize. Run it through Mach3 to get a picture.
+)
+  
+(CC right so that there should be no intersections.)
+
+X1 Y1 Z1 (filtered out since we're here after the G40 above)
+
+
+G42 D1 (CC right)
+X0 Y0 Z0
+X1 Y1  
+G02 X1 Y2 R0.50
+X2 Y2
+G02 X2.50 Y2.50 R0.70
+X4 Y3
+G03 X4.25 Y3.50 R1.0
+G03 X2 Y3 R4.5
+G03 X6 Y1 R8
+X7 Y8
+G40
+
+( Same exact thing, but with CC left )
+
+X1 Y1 Z1
+
+G41 D1 (CC left)
+X0 Y0 Z0
+X1 Y1   
+G02 X1 Y2 R0.50
+X2 Y2
+G02 X2.50 Y2.50 R0.70
+X4 Y3  
+G03 X4.25 Y3.50 R1.0
+G03 X2 Y3 R4.5
+G03 X6 Y1 R8
+X7 Y8
+G40
+
+X1 Y1 Z1
+
+M30
+
+( None of the stuff below needs to be tested. I decided to not to allow
+  cutter comp to be used with G18 or G19. See the comments in main.cpp
+  under v08.
+)
+
+( Next, try using the oddball planes, ZX and  YZ.)
+G41 D1 (CC left)
+X2 Y2
+G18 (ZX-plane)
+G02 X3 Z-1 R4 (way wrong. y goes to -1 when it should be 2.125 or so and z should go to -1)
+X2 Y3
+G03 X4 Z1 R5
+G02 X2 Z0 R3
+X3 Y3 Z1
+
+X1 Y1 Z1
+G19 (YZ-plane)
+X2 Y2
+G03 Y3 Z4 R2
+X3 Y2
+G02 Y1 Z2 R3
+G03 Y3 Z3 R2
+X2 Y2 Z1
+G40
+
+X0Y0Z0
+
+X1 Y1 Z1
+
+(Same thing, but CC right.)
+G42 D1 (CC right)
+X2 Y2
+G18 (ZX-plane)
+G02 X3 Z-1 R4
+X2 Y3
+G03 X4 Z1 R5
+G02 X2 Z0 R3
+X3 Y3 Z1
+
+X1 Y1 Z1
+G19 (YZ-plane)
+X2 Y2
+G03 Y3 Z4 R2
+X3 Y2
+G02 Y1 Z2 R3
+G03 Y3 Z3 R2
+X2 Y2 Z1
+G40
+
+
+
+M30

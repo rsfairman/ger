@@ -1,0 +1,21 @@
+(
+Test input for Layer04, which gets rid of incremental mode. It expresses everything
+in absolute coordinates so that G90/91 disappear from the stream.
+There's not a lot that can go wrong.
+)
+
+O123
+
+G00 X0 Y0 Z0
+
+G01 X1 Y1 Z1
+
+G91
+X1 Y1 Z1
+X-1 Y-1 Z-1
+X-1 Y-1 Z-1
+
+G02 X2 Y2 Z2 I4 J4
+G03 X1 Y1 Z1 R2
+
+M30

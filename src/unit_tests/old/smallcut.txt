@@ -1,0 +1,8 @@
+(Make a really small cut so that the DA is tiny too.)
+O123
+X0Y0Z1
+Z-1
+Z0
+G00 X1 Y1 Z-1
+(G00 X1 Y1)
+M30

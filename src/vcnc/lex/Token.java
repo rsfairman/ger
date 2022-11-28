@@ -25,9 +25,9 @@ and strings. The function call is terminated by new-line or semicolon.
 Note that, for G/M-codes that are unknown to the system, the lexer assumes
 that they follow the usual form. That is, after the initial G/M-whatever,
 there will be a series of letter/number pairs.
-
  
 */
+
 
 public class Token {
   
@@ -40,8 +40,8 @@ public class Token {
   public static final char NUMBER = 'n';
   
   // All tokens have some kind of letter associated with them: G, M, X or 
-  // whatever.
-  // BUG: Maybe this should be called the "type" instead of "letter."
+  // whatever. Sometimes this is used more like a type, like for Wizards,
+  // but 'letter' seems to fit better than 'type'.
   public char letter = ' ';
   
   // Some tokens have an integer associated with them; others use a double.
@@ -59,7 +59,7 @@ public class Token {
   public int isub = -1;
   
   // And externally defined functions (wizards) have a name.
-  // This is also used for string arguments to wizards.
+  // This field is also used for string arguments to wizards.
   // Again, I could use some method of typing with sub-classes of Token so
   // that none of these sub-classes have unused fields, but it's not worth
   // the effort or the resulting messiness. Effectively, the letter field
@@ -70,7 +70,7 @@ public class Token {
   // should be reported if this.letter == '!'. This will generally be null.
   public String error = null;
   
-  // If the parser finds an error, then it needs to kwow the line number on 
+  // If the parser finds an error, then it needs to know the line number on 
   // which the error occurred. This is the line number from which each token 
   // came.
   public int lineNumber = 0;
@@ -92,7 +92,10 @@ public class Token {
   
   public String toString() {
     
-    // For testing.
+    // This serves two purposes. It produces output for the user to view
+    // when debugging his g-code. It is also used for unit tests.
+    
+    // BUG: Not really complete. There are cases of tokens this doesn't handle.
     String answer = String.format("%c",letter);
     
     if (letter == WIZARD)

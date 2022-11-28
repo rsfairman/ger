@@ -1,12 +1,14 @@
 package vcnc.lex;
 
-import vcnc.transpile.TextBuffer;
 
 /*
 
 Convert an input TextBuffer to a series of Token objects.
 
 */
+
+import vcnc.transpile.TextBuffer;
+
 
 public class Lexer {
   
@@ -47,7 +49,7 @@ public class Lexer {
   
   public Lexer spinOff(int n,int assumedLine) {
     
-    // BUG: Is this used?
+    // BUG: Is this used? What was it intended for?
     
     // Create a new lexer based on the same underlying text as the current 
     // TextBuffer, but start at character n, which is assumed to be on the 
@@ -127,17 +129,18 @@ public class Lexer {
     // 
     // NOTE: I have written this to accept multi-line comments. Not all 
     // controllers allow them. This does NOT allow nested comments.
-    //
+    // 
     // This returns one of:
-    // 0 means everything was normal -- the comment was closed.
+    // 0 means everything was normal -- the comment was closed:
+    //   CommentClosedNormally
     // 1 means that the comment was never closed; it ran off the end of the 
-    //   file.
+    //   file : CommentNotClosed.
     // 2 means that a '(' appeared inside the comment. Most likely, the user
-    //   used a ')' shortly thereafter because he had short remark (like this).
-    //   By flagging these separately, we're being nice to the user; otherwise,
-    //   he would get a long string of mysterious lexical errors. I was bitten
-    //   by this myself, which is why I added this flag.
-    // These are defined above.
+    //   used a ')' shortly thereafter because he had a short remark (like 
+    //   this). By flagging these separately, we're being nice to the user; 
+    //   otherwise, he would get a long string of mysterious lexical errors. I was
+    //   bitten by this myself, which is why I added this flag: CommentNested.
+    // These constants are defined above.
     
     char c = getc();
     
@@ -178,7 +181,7 @@ public class Lexer {
     
     // Read and discard any whitespace: spaces, tabs, comments and carriage 
     // returns. NOTE: \n is not considered to be white space, but \r is.
-    // This returns the values from readComment(), but where 
+    // This returns values with the same meaning as in readComment(), but where 
     // CommentClosedNormally is extended to mean "everything was normal."
     while (true)
       {
@@ -186,7 +189,7 @@ public class Lexer {
         if (c == Token.EOF)
           return CommentClosedNormally;
         
-        // BUG: I am a bit worried about \n and \r. I have assumed that all 
+        // NOTE: I am a bit worried about \n and \r. I have assumed that all 
         // machines will use \n for a newline, but some machines also have a 
         // \r, which can always be ignored.
         if ((c == ' ') || (c == '\t') || (c == '\r'))
@@ -690,34 +693,8 @@ public class Lexer {
         // numbers and strings up till we reach EOL.
         answer = readWizardToken();
         
+        // BUG: Testing
         System.out.println("wiz token: " +answer.toString());
-
-//        closed = readWhite();
-//        answer = readWizardToken();
-//        
-//        System.out.println("wiz token: " +answer.toString());
-//        closed = readWhite();
-//        answer = readWizardToken();
-//        
-//        System.out.println("wiz token: " +answer.toString());
-//        closed = readWhite();
-//        answer = readWizardToken();
-//        
-//        System.out.println("wiz token: " +answer.toString());
-//        closed = readWhite();
-//        answer = readWizardToken();
-//        
-//        System.out.println("wiz token: " +answer.toString());
-//        closed = readWhite();
-//        answer = readWizardToken();
-//        
-//        System.out.println("wiz token: " +answer.toString());
-//        closed = readWhite();
-//        answer = readWizardToken();
-//        
-//        System.out.println("wiz token: " +answer.toString());
-//        
-//        System.exit(0);
         
         if ((answer.letter == Token.EOL) || (answer.letter == Token.EOF))
           this.wizardMode = false;
@@ -737,6 +714,7 @@ public class Lexer {
         this.wizardMode = true;
         answer = readWord(c);
         
+        // BUG: Testing
         System.out.println("Wizard word: " +answer.toString());
         
         answer.endCount = theCode.getLastCharIndex();
@@ -747,7 +725,7 @@ public class Lexer {
     readSpaces();
     
     // BUG: For reasons I haven't unraveled, you can get a whole
-    // bunch of EOF tokens (*) at the end.
+    // bunch of EOF tokens (*) at the end. They don't hurt anything, but...
     switch (c)
       {
         case Token.EOF  :  

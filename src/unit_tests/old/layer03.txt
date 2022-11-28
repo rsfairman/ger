@@ -1,0 +1,87 @@
+(
+To test the Layer03 class, which eliminates polar coordinates from the stream. 
+It also removes linear "moves" from the stream that do not actually move the
+tool.
+)
+
+O123
+
+(See if non-moves are removed from the stream.)
+G01 X1 Y1
+X1 Y1
+G91 (incremental mode)
+X0 Y0 (non-move statement should disappear)
+G90
+
+X2 Y2
+
+(Enter PC mode)
+G16
+X1 Y1
+(G16) (can't do it again)
+
+(G00 X2 Y2) (no G00 in PC mode)
+(G01 X3 Y3) (no G01 in PC mode)
+
+( Try some PC moves in absolute mode)
+
+X4 Y90  (move to 0.0,4.0 at 90 degrees)
+X2 Y180 (move to -2.0,0.0)
+X1 Y45  (move to 1/sqrt 2,1/sqrt 2 )
+
+G15 (out of PC mode)
+X0 Y0
+X1 Y1 Z0
+
+G16 (back to PC mode)
+
+G18 (ZX-plane, so x = angle, z = distance)
+
+(
+Think of the z-axis like the x-axis and the x-axis like the y-axis.
+So we measure the angle from the z-axis toward the x-axis as we move
+CCW. Remember, all moves in absolute mode are relative to the temporary
+origin at the tool's position before entering PC mode.
+)
+
+X90 Z1   (increase x by 1, z stays the same)
+X180 Z2  (decrease z by 2, x stays the same)
+X45 Z1   (x and z both increase by 0.707 = 1/sqrt s)
+
+G19 (YZ-plane, so Y = distance, Z = angle)
+
+(
+Think of the y-axis like the x-axis and the z-axis like the y-axis.
+We measure the angle from the y-axis toward the z-axis moving CCW.
+We're still using the same origin as in the previous few statements
+since we haven't left PC mode.
+)
+
+Y1 Z90  (z increases by 1, y stays the same)
+Y2 Z180 (y decreases by 2, z stays the same)
+Y1 Z45  (y and z both increase by 0.707 = q/sqrt 2)
+
+G15 (out of PC mode)
+
+X1 Y1 
+
+G16 (back to PC mode)
+
+G91 (incremental mode)
+
+(
+In incremental mode, the origin of the PC moves changes with each move.
+Remember, we are still in incremental mode after this layer filters out
+the PC moves, so the answer will be in relative terms until it passes
+through Layer04.
+)
+
+G17 (XY-plane)
+
+X1 Y0
+X1 Y0
+X1 Y90
+X3 Y180
+
+
+M30

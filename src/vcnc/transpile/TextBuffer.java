@@ -41,6 +41,13 @@ public class TextBuffer {
     bufferUpdate();
   }
   
+  public TextBuffer(String theText) {
+    this.theGetter = new TextGetter(theText);
+    this.mark = 0;
+    this.bufTwo = theGetter.read(this.biteSize);
+    bufferUpdate();
+  }
+  
   public TextBuffer spinOff(int n) {
     
     // Create a new TextBuffer based on the same underlying TextGetter, and

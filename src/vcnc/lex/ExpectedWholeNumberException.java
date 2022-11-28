@@ -7,7 +7,7 @@ Used when a whole number is expect while parsing, and you get something else.
 */
 
 
-public class ExpectedWholeNumberException extends Exception {
+class ExpectedWholeNumberException extends Exception {
   
   public String msg = null;
 

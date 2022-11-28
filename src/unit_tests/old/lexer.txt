@@ -1,0 +1,42 @@
+(To test the Lexer class.)
+(There are a lot of different errors possible:)
+( D-values should be given as D[whole number].)
+( F-values should be given as F[floating point number].)
+( G-values should be given as G[whole number].)
+( H-values should be given as H[whole number].)
+( I/J/K-values should be given as I[floating point number].)
+( L/N/M/O values are whole numbers.) 
+( P and Q are treated as doubles in the lexer.)
+( R is a floating point number.)
+( S is a whole number.)
+( T is a whole number.)
+( U is a floating point number.)
+( X/Y/Z are floating point numbers.)
+
+(All that the lexer is really doing is reading things for the form)
+(XY, where X is a letter and Y is a number, either floating point)
+(or a whole number. The code here is almost identical in every case,)
+(so this just tests a few cases.)
+
+(What you should see are a bunch of lexical errors, together with some)
+(properly formed tokens.)
+
+( I also want
+to
+test
+mult-line
+comments
+)
+
+(Also, what if a comment runs off the end of a file?
+ Remove the close-parenthesis to find out.)
+ 
+
+O123
+D12.8
+Dblah
+Ijunk
+I-4
+X-17.8
+Z42
+

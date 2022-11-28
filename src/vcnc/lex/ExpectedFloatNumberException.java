@@ -8,7 +8,7 @@ something else.
 */
 
 
-public class ExpectedFloatNumberException extends Exception {
+class ExpectedFloatNumberException extends Exception {
   
   public String msg = null;
 

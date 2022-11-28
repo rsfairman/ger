@@ -27,14 +27,18 @@ public class TextGetter {
 	public TextGetter() {
 		// Do nothing.
 	}
-	
-	public TextGetter(JTextArea theText) {
-		this.theText = theText;
-		this.mark = 0;
-		this.textLength = theText.getDocument().getLength();
-		
-//		System.out.println("Chars is " +textLength);
-	}
+
+  public TextGetter(JTextArea theText) {
+    this.theText = theText;
+    this.mark = 0;
+    this.textLength = theText.getDocument().getLength();
+  }
+  
+  public TextGetter(String theText) {
+    this.theText = new JTextArea(theText);
+    this.mark = 0;
+    this.textLength = theText.length();
+  }
 	
 	public TextGetter spinOff(int n) {
 		

@@ -1,0 +1,40 @@
+(
+This is a much simpler situation since all Layer01 does is convert to
+a uniform system of measurement -- inches or mm. It does do a bit
+of error checking too concerning choice of plane -- G17/18/19.
+)
+
+
+O123
+
+(Test the conversion between inches and mm. Remember,
+ the system defaults to whatever was chosen in the "Set
+ Geometry" dialog.)
+
+G00 X1 Y1; X2 Y2;G20
+G20
+X4 Y4;G21 X100Y100 G20 X10 Y10
+
+G02 X1 Y1 Z1 I0 J1 F22
+
+G16
+G02 X1 Y1 Z1 I0 J1  (no arcs in PC mode!)
+G15
+
+(Only use two of the three I/J/K values.)
+G03 X1 Y1 Z1 I1 J1 K1 R2 (this is caught by the parser)
+G03 X1 Y1 Z1 I1 J1 K1
+
+G18 G02 X1 Y1 Z1 I1 J1 K1
+G19 G03 X1 Y1 Z1 I1 J1 K1
+G17 G03 X1 Y1 Z1 I1 J1 K1
+G02 X1 Y1 Z1 I1 J1
+
+
+M30
+
+
+
+
+
+

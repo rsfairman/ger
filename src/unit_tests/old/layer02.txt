@@ -1,0 +1,59 @@
+(
+To test the Layer02 class. This class takes care of TLO and work offsets --
+G43, 44, 49 TLO and G52, 53-59. I also verify that the extra statements
+from an M06 are generated.
+
+To test these things, you must load or set values in the "Tool Table"
+dialog -- for TLO -- or in the "Work Offsets" dialog.
+)
+
+O123
+
+G00 X1 Y1 Z0
+
+( Test TLO first )
+
+(G16) (Turn on PC. TLO not allowed in PC mode)
+(G91) (TLO not allowed in incremental mode)
+(G42 D4) (TLO not allowed with CC)
+
+(G43 Z1 H33) (33 is too large)
+
+G43 Z1 H3 (don't do it again)
+
+X2 Y2 Z2
+G02 X1 Y1 Z1 R0.5
+G02 X2 Y2 Z2 I1 J1
+X1 Y1
+
+G49 (cancel TLO)
+
+( Now Test Work Offsets )
+X0 Y0
+G52 X10 Y10 Z10
+X1 Y1
+G03 X2 Y2 Z2 I4 J4
+G54
+
+( Test M06 )
+G91
+X1 Y1 Z1
+M06 T4
+X2 Y2 Z2
+G90
+
+G56
+X5 Y5 Z5
+G54
+
+X1 Y1 Z1
+
+( Now try both TLO and work offset together)
+G43 H3
+G56
+X10 Y10 Z10
+G54
+
+M30
+
+

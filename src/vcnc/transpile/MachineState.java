@@ -10,12 +10,32 @@ the G-code are converted to the machine units (inches or mm) so that
 curInch is no longer relevant. Likewise, Layer04 converts everything to
 absolute coordinates, making the absolute field irrelevant.
 
+In theory, the code would be more modular and pure if some of these variables
+were held only by the layer that uses them, but it's easier to hold them
+all here.
+
+BUG: That said, maybe some of these *should* be taken out of here. Think 
+through how each variable is used.
+
 */
 
+import vcnc.workoffsets.WorkOffsets;
+
+
 public class MachineState {
+
+  // The tool turret. This is fixed throughout the life of each G-code
+  // script, after any initial adjustments before the O-number statement.
+  public static ToolTurret turret = null;
+  
+  // The values to be used for G56, etc.
+  public static WorkOffsets workOffsets = new WorkOffsets();
   
   // Whether the machine works internally with inches (true) or mm (false).
   public static boolean machineInchUnits = true;
+  
+  // BUG: In the original code there's also a concept of 'scale'. I might
+  // need that at some point, particularly when rendering.
   
   // Whether the machine is *currently* working inches (true) or mm (false).
   public static boolean curInch = true;
@@ -44,10 +64,6 @@ public class MachineState {
   public static double offsetX = 0.0;
   public static double offsetY = 0.0;
   public static double offsetZ = 0.0;
-  
-  // The tool turret. This is fixed throughout the life of each G-code
-  // script, after any initial adjustements before the O-number statement.
-  public static ToolTurret turret = null;
   
   // Whether TLO is being applied and the amount. Positive means that the tool
   // moves upward while in TLO mode. TLO mode can be invoked in either a 
