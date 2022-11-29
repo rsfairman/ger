@@ -1,20 +1,7 @@
 package vcnc.wizard;
 
-/*
-Helper to make it more natural to create a MOVE Statement. The idea is to
-say
-new MoveMaker().x(1.0).z(0.10).f(40.0).close();
-or whatever, only including the values you want to use. That's the crucial
-point: if a value is omitted, then it should have no effect on the move.
-
-Java doesn't have named parameters, so you can't say something like
-move(x=3.0,f=20.0)
-with the understanding that the Y and Z arguments don't appear.
-
-*/
-
-import vcnc.parse.Statement;
-import vcnc.parse.MoveState;
+import vcnc.tpile.parse.MoveState;
+import vcnc.tpile.parse.Statement;
 
 
 public class MoveMaker {

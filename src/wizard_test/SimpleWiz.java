@@ -24,9 +24,7 @@ and .compileStuff() of v17. I dropped Java after that.
 
 import java.util.ArrayList;
 
-import vcnc.parse.Statement;
-
-
+import vcnc.tpile.parse.Statement;
 import vcnc.wizard.WizardBase;
 
 

@@ -31,11 +31,9 @@ sub-directories of unit_tests, one sub-dir for each layer.
 import java.io.File;
 
 import vcnc.util.FileIOUtil;
-
-import vcnc.lex.Lexer;
-import vcnc.lex.Token;
-
-import vcnc.transpile.TextBuffer;
+import vcnc.tpile.TextBuffer;
+import vcnc.tpile.lex.Lexer;
+import vcnc.tpile.lex.Token;
 
 
 public class UnitTests {
@@ -71,48 +69,21 @@ public class UnitTests {
         String inString = 
             FileIOUtil.loadFileToString(testDir,lexTests[i]+".in");
         
-        TextBuffer input = new TextBuffer(inString);
-    
-        // Run it though the lexer, sending the output to a buffer.
-        StringBuffer theBuffer = new StringBuffer();
-        
-        Lexer theLexer = new Lexer(input);
-        Token tok = theLexer.getToken();
-        while (tok.letter != Token.EOF)
-          {
-            
-            theBuffer.append(tok.lineNumber+ "\t");
-            
-            if (tok.letter == Token.EOL)
-              theBuffer.append(";\n");
-            else if (tok.letter == Token.WIZARD)
-              theBuffer.append("extern\t" + tok.wizard + "\n");
-            else if (tok.letter == Token.STRING)
-              theBuffer.append("string\t" + tok.wizard + "\n");
-            else if (tok.letter == Token.NUMBER)
-              theBuffer.append("num\t" + tok.d + "\n");
-            else if (tok.letter == Token.ERROR)
-              theBuffer.append("error\t" + tok.error + "\n");
-            else
-              // Normal G-code
-              theBuffer.append(tok.letter+ "\t" +tok.i+ "\t" + tok.d + "\n");
-              
-            tok = theLexer.getToken();
-          }
+        // Run through the Lexer.
+        String outString = Lexer.digestAll(inString); 
         
         // Save the resulting output.
         FileIOUtil.saveStringAsAscii(
-            testDir,lexTests[i] + ".out",theBuffer.toString());
+            testDir,lexTests[i] + ".out",outString);
         
         // Read the reference file.
         String refString = 
             FileIOUtil.loadFileToString(testDir,lexTests[i] + ".ref");
         
         // Compare the two Strings, and flag the problem, if there is one.
-        if (refString.equals(theBuffer.toString()) == false)
+        if (refString.equals(outString) == false)
           System.err.println("Unit test failed for " +lexTests[i]);
       }
-      
   }
     
     

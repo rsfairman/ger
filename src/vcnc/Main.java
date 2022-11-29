@@ -9,6 +9,12 @@ package vcnc;
 //
 // I think the lexer is good...see about how to do unit tests...
 // 
+// Change TextBuffer so that the constructor takes a String (or ??) and
+// the same for TextGetter. 
+//
+// Change the Lexer to have a single "digest all" method that returns a 
+// String suitable for using in unit test and for display to the user.
+// 
 //* work offsets table and persistence framework
 
 
@@ -92,11 +98,29 @@ I also removed the components package, which was just some junky example code
 from Oracle.
 
 Somehow I had two classes for global state variables. I got rid of 
-vcnc.MachineGlobals and folded it into vcnc.transpile.MachineState. 
+vcnc.MachineGlobals and folded it into vcnc.transpile.MachineState.
+Note that vcnc.transpile has been renamed (as of v05) to vcnc.tpile.  
 
 Added a unit test framework. It can be run from the main() method instead
 of launching the GUI.
 
+Rewrote things to make TextBuffer simpler and not based directly on a 
+JTextArea. This simplifies a variety of things, including the Lexer (and
+will simplify the higher layers eventually).  
+
+v05
+
+Clean up and throw away much useless code related to changes made in the
+previous version.
+
+The whole TextGetter/TextBuffer thing was overkill. They've been combined to a 
+single class and it no longer does any buffering on it's own. It just uses 
+String.charAt().
+
+Moved some of the files around so that all the code related to transpiling
+is in vcnc.tpile, whether directly under it, or in a sub-package.
+
+v06
 
 
 
@@ -300,10 +324,10 @@ public class Main {
     // tests, but it's more trouble than it's worth.
     
     // The usual way to run the program:
-//    guiMain();
+    guiMain();
     
     // Or, run a series of unit tests:
-    testMain();
+//    testMain();
 
   }
   

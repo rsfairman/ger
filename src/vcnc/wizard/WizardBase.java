@@ -2,7 +2,7 @@ package vcnc.wizard;
 
 import java.util.ArrayList;
 
-import vcnc.parse.Statement;
+import vcnc.tpile.parse.Statement;
 
 /*
 

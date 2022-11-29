@@ -42,13 +42,11 @@ import vcnc.ui.TabbedPaneDnD.TabbedPaneDnD;
 import vcnc.util.FileIOUtil;
 import vcnc.util.LoadOrSaveDialog;
 import vcnc.util.ChoiceDialogRadio;
-import vcnc.lex.Lexer;
-import vcnc.lex.Token;
-
-import vcnc.transpile.MachineState;
-import vcnc.transpile.TextBuffer;
-import vcnc.transpile.Translator;
-
+import vcnc.tpile.MachineState;
+import vcnc.tpile.TextBuffer;
+import vcnc.tpile.Translator;
+import vcnc.tpile.lex.Lexer;
+import vcnc.tpile.lex.Token;
 import vcnc.workoffsets.WorkOffsetDialog;
 
 
@@ -170,7 +168,7 @@ public class MainWindow extends JFrame
   }
   
   
-  private void doTestLexer() throws OutOfMemoryError {
+  private void doTestLexer() {
   	
   	// Run the lexer, and display the tokens in a new tab.
     // BUG: This shouldn't appear in production -- or probably not. Very few
@@ -191,13 +189,20 @@ public class MainWindow extends JFrame
       return;
     
     GInputTab gCodeTab = (GInputTab) curTabComponent;
-    TextBuffer theText = new TextBuffer(gCodeTab.getTextArea());
+//    TextBuffer theText = new TextBuffer(gCodeTab.getTextArea());
     
+//    System.out.println("will digest");
+    
+    String fullyDigested = Lexer.digestAll(gCodeTab.getTextArea().getText());
+    
+//    System.out.println("digest done");
+    
+    /*
   	StringBuffer theBuffer = new StringBuffer();
   	
   	// BUG: I think I got rid of the possibility of an exception here.
   	// No longer need try/catch.
-  	
+  	// In fact, get rid of this. It's been improved and simplified above.
   	try {
   	  Lexer theLexer = new Lexer(theText);
   	  Token tok = theLexer.getToken();
@@ -251,6 +256,21 @@ public class MainWindow extends JFrame
       	theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Lexer",lexerOutput);
       	gCodeTab.lexOut = lexerOutput;
   	  }
+  	*/
+
+    // Create a new tab, considering the possibility that this might be
+    // a re-do and the tab already exists.
+    if (gCodeTab.lexOut != null)
+      {
+        LexerTab lexerOutput = gCodeTab.lexOut;
+        lexerOutput.theText.setText(fullyDigested);
+      }
+    else
+      {
+        LexerTab lexerOutput = new LexerTab(fullyDigested,gCodeTab);
+        theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Lexer",lexerOutput);
+        gCodeTab.lexOut = lexerOutput;
+      }
   }
   
   /*
@@ -429,7 +449,7 @@ public class MainWindow extends JFrame
       return;
     
     GInputTab gCodeTab = (GInputTab) curTabComponent;
-    TextBuffer theText = new TextBuffer(gCodeTab.getTextArea());
+    TextBuffer theText = new TextBuffer(gCodeTab.getTextArea().getText());
     
   	Translator trans = null;
   	try {
