@@ -1,6 +1,6 @@
 package vcnc.tpile.parse;
 
-public class TLOState extends StateData {
+public class DataTLO extends StatementData {
   
   public int hRegister = -1;
   public boolean hasZ = false;

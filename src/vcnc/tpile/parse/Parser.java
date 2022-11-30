@@ -1,6 +1,16 @@
-    package vcnc.tpile.parse;
+package vcnc.tpile.parse;
 
-import vcnc.tpile.TextBuffer;
+/*
+
+Converts G-code to a series of Statement objects. Each Statement is a self-
+contained G-code "command," including the possibility of wizards commands.
+
+This creates a Lexer and consumes Token objects from it.
+ 
+*/
+
+
+import vcnc.tpile.CodeBuffer;
 import vcnc.tpile.lex.Lexer;
 import vcnc.tpile.lex.Token;
 
@@ -10,11 +20,12 @@ public class Parser {
   // The underlying Lexer object.
   private Lexer theLexer = null;
 
-  // These statements are to be fed upward to the next layer.
+  // These statements are to be fed upward to the next layer, and they're
+  // buffered here.
   private StatementBuffer statements = null;
   
   
-  public Parser(TextBuffer theCode) {
+  public Parser(CodeBuffer theCode) {
     
     // Get the lexer ready.
     this.theLexer = new Lexer(theCode);
@@ -24,7 +35,6 @@ public class Parser {
     statements.first = fillOneBuffer();
     statements.second = fillOneBuffer();
   }
-
 
   private String formError(int lineNumber,String msg) {
     return "Error on line " +lineNumber+ ": " + msg;
@@ -68,7 +78,7 @@ public class Parser {
     // Have just read a wizard command. Parse to the end of the line.
     answer.type = Statement.WIZARD;
     
-    Wizard wiz = new Wizard();
+    DataWizard wiz = new DataWizard();
     answer.data = wiz;
     
     wiz.cmd = startToken.wizard;
@@ -108,7 +118,7 @@ public class Parser {
     else if (startToken.i == 1)
       answer.type = Statement.G01;
     else if ((startToken.i == 2) || (startToken.i == 3))
-      { 
+      {
         // Circular interpolation. Both cases are similar.
         if (startToken.i == 2) answer.type = Statement.G02;
         if (startToken.i == 3) answer.type = Statement.G03;
@@ -119,7 +129,7 @@ public class Parser {
         // the statement may use I/J/K or R to specify the radius, but not both.
         
         // So, the next token must be X, I or R.
-        Circular data = new Circular();
+        DataCircular data = new DataCircular();
         answer.data = data;
         Token next = theLexer.peekToken();
         
@@ -251,8 +261,8 @@ public class Parser {
         
         // Make sure that this makes sense. If the user does not give X or Y,
         // and he tries to used R instead of I/J, that doesn't make sense.
-        // Other things that don't make sense are giving R along with I and/or J,
-        // though the way this is written, the latter would be caught.
+        // Other things that don't make sense are giving R along with I and/or
+        // J, though the way this is written, the latter would be caught.
         if ((data.xDefined == false) && (data.yDefined == false) 
             && (data.zDefined == false) && (data.rDefined == true))
             {
@@ -261,7 +271,7 @@ public class Parser {
                   "radius given, but no end-point");
               readToEOLOrSemi();
             }
-      }
+      } // end circular interpolation case.
     else if (startToken.i == 15)
       // Polar coordinates off.
       answer.type = Statement.G15;
@@ -282,9 +292,7 @@ public class Parser {
     else if (startToken.i == 21)
       answer.type = Statement.G21;
     else if (startToken.i == 28)
-      // Return to home. Ignore.
-      // BUG: Do NOT IGNORE THIS.
-      answer.type = Statement.PASS;
+      answer.type = Statement.G28;
     else if (startToken.i == 40)
       // Cancel cutter comp.
       answer.type = Statement.G40;
@@ -299,7 +307,7 @@ public class Parser {
         // What G41/42 really does is enter into cutter comp mode.
         // This is what I will do. Whatever follows the G41/42 D/H##
         // must be read as a separate statement.
-        RegisterState data = new RegisterState();
+        DataRegister data = new DataRegister();
         if (startToken.i == 41) answer.type = Statement.G41;
         if (startToken.i == 42) answer.type = Statement.G42;
         
@@ -319,7 +327,7 @@ public class Parser {
           }
         data.regValue = next.i;
         answer.data = data;
-      }
+      } // end cutter comp
     else if ((startToken.i == 43) || (startToken.i == 44))
       {
         // Apply TLO. Similar to cutter comp.
@@ -327,7 +335,7 @@ public class Parser {
         // G43 [Zx.xx] Hn
         if (startToken.i == 43) answer.type = Statement.G43;
         if (startToken.i == 44) answer.type = Statement.G44;
-        TLOState data = new TLOState();
+        DataTLO data = new DataTLO();
         
         // See if there's an optional Z value.
         Token next = theLexer.getToken();
@@ -351,7 +359,7 @@ public class Parser {
         
         data.hRegister = next.i;
         answer.data = data;
-      }
+      } // end TLO
     else if (startToken.i == 49)
       // Cancel TLO.  
       answer.type = Statement.G49;
@@ -447,9 +455,9 @@ public class Parser {
           }
         
         // Statement has been read. Combine the data into a single object.
-        answer.data = new MoveState(xDefined,yDefined,zDefined,false,
+        answer.data = new DataMove(xDefined,yDefined,zDefined,false,
                                     xValue,yValue,zValue,0.0);
-      }
+      } // end G52
     else if ((startToken.i >= 54) && (startToken.i <= 59))
       {
         // Work offsets.
@@ -460,10 +468,6 @@ public class Parser {
         if (startToken.i == 58) answer.type = Statement.G58;
         if (startToken.i == 59) answer.type = Statement.G59;
       }
-    else if ((startToken.i >= 80) && (startToken.i <= 89))
-      // Various canned cycles, which I ignore.
-      // BUG: Don't ignore. Pass through.
-      answer.type = Statement.PASS;
     else if (startToken.i == 90)
       // Absolute mode.
       answer.type = Statement.G90;
@@ -485,7 +489,7 @@ public class Parser {
     // Have already read the M-something token. Read anything else needed to 
     // form a complete statement.
     if (startToken.i == 0)
-      // Program Stop. I think this is a hard stop.
+      // Program Stop. Treated as a hard stop.
       answer.type = Statement.M00;
     else if (startToken.i == 1)
       // Program stop. I think this is an optional stop.
@@ -505,7 +509,7 @@ public class Parser {
             return;
           }
         answer.type = Statement.M03;
-        answer.data = new IntState(rpm.i);
+        answer.data = new DataInt(rpm.i);
       }
     else if (startToken.i == 4)
       {
@@ -519,7 +523,7 @@ public class Parser {
             return;
           }
         answer.type = Statement.M04;
-        answer.data = new IntState(rpm.i);
+        answer.data = new DataInt(rpm.i);
       }
     else if (startToken.i == 5)
         // Spindle off
@@ -537,7 +541,7 @@ public class Parser {
             return;
           }
         answer.type = Statement.M06;
-        answer.data = new IntState(tool.i);
+        answer.data = new DataInt(tool.i);
       }
     else if ((startToken.i == 7) || (startToken.i == 8) || (startToken.i == 9))
       {
@@ -551,7 +555,7 @@ public class Parser {
       answer.type = Statement.M30;
     else if ((startToken.i == 40) || (startToken.i == 41))
       {
-        // Spindle high/low. Pass it on even though it will be ignored.
+        // Spindle high/low.
         if (startToken.i == 40) answer.type = Statement.M40;
         if (startToken.i == 41) answer.type = Statement.M41;
       }
@@ -579,7 +583,7 @@ public class Parser {
             return;
           }
         
-        SubroutineCall call = new SubroutineCall();
+        DataSubroutineCall call = new DataSubroutineCall();
         answer.data = call;
         
         // Note: I used a double because I think that P can mean other things 
@@ -604,7 +608,7 @@ public class Parser {
           }
         
         answer.type = Statement.M98;
-      }
+      } // end M98 (call subroutine)
     else if (startToken.i == 99)
       // Return from subprogram
       answer.type = Statement.M99;
@@ -622,7 +626,7 @@ public class Parser {
     // Line number.
     // BUG: THis shouldn't be possible. They're tossed by readWhite().
     answer.type = Statement.LINE;
-    answer.data = new IntState(startToken.i);
+    answer.data = new DataInt(startToken.i);
   }
   
   private void parseOCode(Statement answer,Token startToken) {
@@ -634,7 +638,7 @@ public class Parser {
     // after the O### statement.
     answer.type = Statement.PROG;
     
-    SubProgState data = new SubProgState();
+    DataSubProg data = new DataSubProg();
     data.progNumber = startToken.i;
     answer.data = data;
     
@@ -739,7 +743,7 @@ public class Parser {
       }
     
     // Statement has been read. Combine the data into a single object.
-    answer.data = new MoveState(xDefined,yDefined,zDefined,fDefined,
+    answer.data = new DataMove(xDefined,yDefined,zDefined,fDefined,
                                 xValue,yValue,zValue,fValue);
   }
   
@@ -751,18 +755,11 @@ public class Parser {
     // This also reads past any ';' or 'N' tokens.
     readWhite();
     
-    // The next token should be something that opens a statement.
-    // Even though the lexer would accept certain "bare" items, like
-    // "I13.0", they are not valid openings for a statement.
-    
+    // The next token should be something that opens a statement. Parse these
+    // the incoming Tokens to a Statement.
     Token curToken = theLexer.getToken();
     answer.lineNumber = curToken.lineNumber;
     answer.charNumber = curToken.characterCount;
-    
-//    System.out.println("parser reading line " +answer.lineNumber);
-    
-    // BUG: Really: I could collapse a lot of these cases. There are only 
-    // a few that are *not* unexpected bare tokens.
     
     switch (curToken.letter)
       {
@@ -771,94 +768,28 @@ public class Parser {
                             return answer;
         case Token.EOF    : answer.type = Statement.EOF;
                             return answer;
-        case 'D'          : // Should not appear as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected D-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'F'          : // Should not appear as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected F-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'G'          : parseGCode(answer,curToken);
-                            return answer;
-        case 'H'          : // Should not appear as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected H-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'I'          :
-        case 'J'          :
-        case 'K'          : // Should not appear as bare tokens.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected I/J/K-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'L'          : // Should not appear as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected L-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'M'          : parseMCode(answer,curToken);
-                            return answer;
-
+        
+        // These are the cases where (we hope) things are going normally.
+        case 'G'  : parseGCode(answer,curToken);
+                    return answer;
+        case 'M'  : parseMCode(answer,curToken);
+                    return answer;
         // BUG: THis shouldn't be possible. 'N' is tossed by readWhite().
-        case 'N'          : parseNCode(answer,curToken);
-                            return answer;
+        case 'N'  : parseNCode(answer,curToken);
+                    return answer;
+        case 'O'  : parseOCode(answer,curToken);
+                    return answer;
+        case 'X'  :
+        case 'Y'  :
+        case 'Z'  : // Handle these moves together. When these appear "bare," 
+                    // they're assumed to be relative to the previous G0 or G1.
+                    parseXYZ(answer,curToken);
+                    return answer;
+        case '@'  : parseWizard(answer,curToken);
+                    return answer;
                             
-        case 'O'          : parseOCode(answer,curToken);
-                            return answer;
-        case 'P'          : // Should not appear as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected P-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'Q'          : // I'm not sure what this could be. Die on it.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected Q-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'R'          : // Should not appear as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected R-value");
-                            readToEOLOrSemi();
-                            return answer;                            
-        case 'S'          : // Neither of these should appear here as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                    "unexpected S-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'T'          : // Should not appear as a bare token.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected T-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'U'          : // Not sure what this is. Die on it.
-                            answer.type = Statement.ERROR;
-                            answer.error = formError(answer.lineNumber,
-                                "unexpected U-value");
-                            readToEOLOrSemi();
-                            return answer;
-        case 'X'          :
-        case 'Y'          :
-        case 'Z'          : // Handle these moves together.
-                            // When these appear "bare," they're assumed to be
-                            // relative to the previous G0 or G1.
-                            parseXYZ(answer,curToken);
-                            return answer;
-        case '@'          : parseWizard(answer,curToken);
-                            return answer;
+        // Any other letter that appears here is an error. These tokens
+        // should not be "bare."
         default :
           answer.type = Statement.ERROR;
           answer.error = formError(answer.lineNumber,
@@ -935,17 +866,27 @@ public class Parser {
 
 /*
 
-const Token* Parser::getToken() throw(const Token*)
-{
-  // Glue. It goes to theLexer and throws if there's an error in the
-  // returned token. Whether the answer is thrown or simply returned,
-  // it's the same answer.
-  const Token* answer = theLexer.getToken();
-  if (answer->letter == TOKEN::LexError)
-    throw (answer);
-  
-  return answer;
-}
+BUG: this C++ (mostly) code is for reference, partly because I'm still not
+sure why I used three buffers in C++. Was there some issue that it solved?
+
+Found a comment in the C++ code (v08)...
+
+//     I changed the way Statement objects are buffered by Parser. Before, I
+//     was using a buffer consisting of two buckets, and I would switch from
+//     one bucket to the other, refilling the one we're done with, when we
+//     reach the end of one of the two buckets. That was fine, except that
+//     when dealing with CC, we need to be able to keep in memory a statement 
+//     from the position one statement *previous* to the current statement.
+//     What happens when there are only two buffers is that, when one of the
+//     two buffers is refilled, we end up overwriting the preious statement.
+//     So, I went to buffers with three buckets. That way we are safe, and
+//     statements won't be overwritten, unless they are more than the bucket
+//     size from the current position in the stream. In essense, Layer05
+//     needs some look-ahead, as many compilers and interpreters do, but it
+//     also needs to be able to look back (or at least keep past statements
+//     in memory temporarily).
+ 
+
 
 //void Parser::parseIJK(Statement *answer,const Token *startToken)
 //{

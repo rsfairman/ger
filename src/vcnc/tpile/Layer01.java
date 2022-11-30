@@ -1,7 +1,7 @@
 package vcnc.tpile;
 
-import vcnc.tpile.parse.Circular;
-import vcnc.tpile.parse.MoveState;
+import vcnc.tpile.parse.DataCircular;
+import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.Statement;
 
 
@@ -10,7 +10,7 @@ public class Layer01 {
   private Layer00 lowerLayer = null;
  
   
-  public Layer01(TextBuffer theText) throws Exception {
+  public Layer01(CodeBuffer theText) throws Exception {
     
     this.lowerLayer = new Layer00(theText);
   }
@@ -54,7 +54,7 @@ public class Layer01 {
     
     // Make sure that the arc specification is consistent with the choice
     // of plane. For instance, you can't use a K-value with G17.
-    Circular theMove = (Circular) cmd.data;
+    DataCircular theMove = (DataCircular) cmd.data;
     if (MachineState.curAxis == AxisChoice.XY)
       {
         if (theMove.kDefined == true)
@@ -104,7 +104,7 @@ public class Layer01 {
       // Nothing to do.
       return;
     
-    Circular theMove = (Circular) cmd.data;
+    DataCircular theMove = (DataCircular) cmd.data;
     if (theMove.xDefined == true)
       theMove.X = toNatural(theMove.X);
     if (theMove.yDefined == true)
@@ -134,7 +134,7 @@ public class Layer01 {
       // Nothing to do.
       return;
     
-    MoveState theMove = (MoveState) cmd.data;
+    DataMove theMove = (DataMove) cmd.data;
     if (MachineState.usingPolar == false)
       {
         if (theMove.xDefined == true)

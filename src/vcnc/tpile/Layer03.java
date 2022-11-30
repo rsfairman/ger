@@ -1,7 +1,7 @@
 package vcnc.tpile;
 
-import vcnc.tpile.parse.Circular;
-import vcnc.tpile.parse.MoveState;
+import vcnc.tpile.parse.DataCircular;
+import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.Statement;
 
 
@@ -33,7 +33,7 @@ public class Layer03 {
   
   
   
-  public Layer03(TextBuffer theText,double X0,double Y0,double Z0) 
+  public Layer03(CodeBuffer theText,double X0,double Y0,double Z0) 
       throws Exception {
     ;
     // X0, Y0, Z0 is the intial postion of the tool.
@@ -80,7 +80,7 @@ public class Layer03 {
     // 
     // If we are in polar coordinate mode, then the meaning of the coordinates
     // that make up a move is different.
-    MoveState theMove = (MoveState) cmd.data;
+    DataMove theMove = (DataMove) cmd.data;
     
     if (MachineState.usingPolar == false)
       {
@@ -415,7 +415,7 @@ public class Layer03 {
     //
     // Note that I am allowing G02/03 even when in polar coordinate mode.
     // Most real machines may not allow this.
-    Circular theMove = (Circular) cmd.data;
+    DataCircular theMove = (DataCircular) cmd.data;
     
     // If none of X,Y,Z are defined, then it's a complete circle.
     // Not every real machine allows this.

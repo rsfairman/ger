@@ -5,7 +5,7 @@ package vcnc.tpile.parse;
 import java.util.ArrayList;
 
 
-public class Wizard extends StateData {
+public class DataWizard extends StatementData {
 
   public String cmd = null;
   

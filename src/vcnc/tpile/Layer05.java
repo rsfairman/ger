@@ -2,6 +2,11 @@ package vcnc.tpile;
 
 /*
 
+BUG: See Parser. I may need to use three buffers there for the Statements
+to allow peeking forward AND back. That's what I did in the C++ version.
+I copied a comment from the C++ to Parser.java about this. There may be
+additional comments about the issue in the parser.cpp file. 
+
 Another layer to the interpreter.
 
 Layer00 handles subroutine calls and returns. This removes M98 and M99 from
@@ -170,10 +175,10 @@ that they are trying to *do* something crazy.
 
 import java.util.ArrayDeque;
 
-import vcnc.tpile.parse.Circular;
-import vcnc.tpile.parse.MoveState;
-import vcnc.tpile.parse.RegisterState;
-import vcnc.tpile.parse.StateData;
+import vcnc.tpile.parse.DataCircular;
+import vcnc.tpile.parse.DataMove;
+import vcnc.tpile.parse.DataRegister;
+import vcnc.tpile.parse.StatementData;
 import vcnc.tpile.parse.Statement;
 
 
@@ -307,7 +312,7 @@ public class Layer05 {
   
    
    
-  public Layer05(TextBuffer theText,double X0,double Y0,double Z0) 
+  public Layer05(CodeBuffer theText,double X0,double Y0,double Z0) 
       throws Exception {
     ;
     
@@ -349,7 +354,7 @@ public class Layer05 {
     // Note where the tool goes due to the given line move.
     // If this is called when in CC mode, the line is assumed
     // to have been adjusted already.
-    MoveState theMove = (MoveState) cmd.data;
+    DataMove theMove = (DataMove) cmd.data;
     if (theMove.xDefined == true)
       machX = theMove.xValue;
     if (theMove.yDefined == true)
@@ -365,7 +370,7 @@ public class Layer05 {
     // Note where the tool goes due to the given arc move.
     // If this is called when in CC mode, the arc is assumed
     // to have been adjusted already.
-    Circular theMove = (Circular) cmd.data;
+    DataCircular theMove = (DataCircular) cmd.data;
     if (theMove.xDefined == true)
       machX = theMove.X;
     if (theMove.yDefined == true)
@@ -378,7 +383,7 @@ public class Layer05 {
 
   private void noteLineUserCoords(Statement cmd) {
     
-    MoveState theMove = (MoveState) cmd.data;
+    DataMove theMove = (DataMove) cmd.data;
     if (theMove.xDefined == true)
       userX = theMove.xValue;
     if (theMove.yDefined == true)
@@ -391,7 +396,7 @@ public class Layer05 {
 
   private void noteArcUserCoords(Statement cmd) {
     
-    Circular theMove = (Circular) cmd.data;
+    DataCircular theMove = (DataCircular) cmd.data;
     if (theMove.xDefined == true)
       userX = theMove.X;
     if (theMove.yDefined == true)
@@ -438,14 +443,14 @@ public class Layer05 {
     // longer have to worry about the axis.
     if (cmd.type == Statement.MOVE)
       {
-        MoveState data = (MoveState) cmd.data;
+        DataMove data = (DataMove) cmd.data;
         if (data.zDefined == true)
           data.zValue = newValue;
       }
     else
       {
         // Must be an arc move.
-        Circular data = (Circular) cmd.data;
+        DataCircular data = (DataCircular) cmd.data;
         if (data.zDefined == true)
           data.Z = newValue;
       }
@@ -465,7 +470,7 @@ public class Layer05 {
     if (cmd.type == Statement.MOVE)
       {
         LineCurve theLine = 
-            new LineCurve(machX,machY,machZ,(MoveState) cmd.data);
+            new LineCurve(machX,machY,machZ,(DataMove) cmd.data);
         theLine.offset(ccLeft,toolRadius);
         answer.x = theLine.x0;
         answer.y = theLine.y0;
@@ -522,7 +527,7 @@ public class Layer05 {
     ToolCurve curve2 = null;
     
     if (privateBuffer.type == Statement.MOVE)
-      curve1 = new LineCurve(userX,userY,userZ,(MoveState) privateBuffer.data);
+      curve1 = new LineCurve(userX,userY,userZ,(DataMove) privateBuffer.data);
     else
       curve1 = new ArcCurve(userX,userY,userZ,MachineState.curAxis,privateBuffer);
     
@@ -530,7 +535,7 @@ public class Layer05 {
       {
         // Note that curve2 starts where curve1 ends.
         if (nextMove.type == Statement.MOVE)
-          curve2 = new LineCurve(curve1.x1,curve1.y1,curve1.z1,(MoveState) nextMove.data);
+          curve2 = new LineCurve(curve1.x1,curve1.y1,curve1.z1,(DataMove) nextMove.data);
         else
           curve2 = new ArcCurve(curve1.x1,curve1.y1,curve1.z1,MachineState.curAxis,nextMove);
       }
@@ -556,7 +561,7 @@ public class Layer05 {
       {
         // We're done -- curve1 is all that's needed.
         // There is no nextMove; we must be leaving CC mode.
-        StateData newGuts = curve1.toState();
+        StatementData newGuts = curve1.toState();
         privateBuffer.data = newGuts;
         
         spareStatement.type = Statement.NIL;
@@ -581,7 +586,7 @@ public class Layer05 {
         // Replace the StateData (a MoveState or CircularState) in privateBuffer
         // with new StateData which is consistent with curve1. To do this, we 
         // must break const-ness.
-        StateData newGuts = curve1.toState();
+        StatementData newGuts = curve1.toState();
         privateBuffer.data = newGuts;
         
         // There's a special case. If we are in the XY-plane, and curve1 involved
@@ -599,7 +604,7 @@ public class Layer05 {
         // of privateBuffer must be changed to take the offset into account.
         // So, begin by adjusting the move before nextMove, in privateBuffer
         // to be along the offset version of curve1.
-        StateData newGuts = curve1.toState();
+        StatementData newGuts = curve1.toState();
         privateBuffer.data = newGuts;
         
         // The bridge move (or "pivot"). Basically, we need these when the angle between
@@ -743,7 +748,7 @@ public class Layer05 {
     else
       this.ccLeft = false;
     
-    RegisterState reg = (RegisterState) enterCCStatement.data;
+    DataRegister reg = (DataRegister) enterCCStatement.data;
     if (reg.D == true)
       // Look in D register for diameter.
       this.toolRadius = MachineState.turret.toolDiameter[reg.regValue] / 2.0;
@@ -831,7 +836,7 @@ public class Layer05 {
     enterCCStatement.type = Statement.MOVE;
 //    if (breakit.data != NULL)
 //      delete breakit.data;
-    MoveState theMove = new MoveState();
+    DataMove theMove = new DataMove();
     enterCCStatement.data = theMove;
     
     theMove.xDefined = true;
@@ -973,7 +978,7 @@ public class Layer05 {
             // given by the user, without the CC adjustment. We need to note
             // where the tool will go before the final move (in privateBuffer) 
             // is adjusted for CC.
-            MoveState theMove = (MoveState) privateBuffer.data;
+            DataMove theMove = (DataMove) privateBuffer.data;
             double postX = userX;
             double postY = userY;
             double postZ = userZ;
@@ -1004,7 +1009,7 @@ public class Layer05 {
             cmd.type = Statement.MOVE;
 //            if (breakit.data != NULL)
 //              delete breakit.data;
-            theMove = new MoveState();
+            theMove = new DataMove();
             cmd.data = theMove;
             
             // We move to the machine coordinates, as noted above.
@@ -1076,7 +1081,7 @@ public class Layer05 {
     double preZ = userZ;
     if (privateBuffer.type == Statement.MOVE)
       {
-        MoveState theMove = (MoveState) privateBuffer.data;
+        DataMove theMove = (DataMove) privateBuffer.data;
         if (theMove.xDefined) preX = theMove.xValue;
         if (theMove.yDefined) preY = theMove.yValue;
         if (theMove.zDefined) preZ = theMove.zValue;
@@ -1084,7 +1089,7 @@ public class Layer05 {
     else
       {
         // Must be an arc move.
-        Circular theMove = (Circular) privateBuffer.data;
+        DataCircular theMove = (DataCircular) privateBuffer.data;
         if (theMove.xDefined) preX = theMove.X;
         if (theMove.yDefined) preY = theMove.Y;
         if (theMove.zDefined) preZ = theMove.Z;

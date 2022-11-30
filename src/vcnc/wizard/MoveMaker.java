@@ -1,6 +1,6 @@
 package vcnc.wizard;
 
-import vcnc.tpile.parse.MoveState;
+import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.Statement;
 
 
@@ -51,7 +51,7 @@ public class MoveMaker {
     Statement answer = new Statement();
     answer.type = Statement.MOVE;
     
-    MoveState m = new MoveState();
+    DataMove m = new DataMove();
     
     m.xDefined = this.xDefined;
     m.yDefined = this.yDefined;

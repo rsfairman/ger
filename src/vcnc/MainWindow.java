@@ -43,10 +43,8 @@ import vcnc.util.FileIOUtil;
 import vcnc.util.LoadOrSaveDialog;
 import vcnc.util.ChoiceDialogRadio;
 import vcnc.tpile.MachineState;
-import vcnc.tpile.TextBuffer;
 import vcnc.tpile.Translator;
 import vcnc.tpile.lex.Lexer;
-import vcnc.tpile.lex.Token;
 import vcnc.workoffsets.WorkOffsetDialog;
 
 
@@ -182,82 +180,14 @@ public class MainWindow extends JFrame
         return;
 
     Component curTabComponent = theTabs.getComponentAt(curTabIndex);
-    
     TypedDisplayItem curTabTyped = (TypedDisplayItem) curTabComponent;
     if (curTabTyped.type() != TabbedType.G_INPUT)
       // Only makes sense for input G-code.
       return;
     
     GInputTab gCodeTab = (GInputTab) curTabComponent;
-//    TextBuffer theText = new TextBuffer(gCodeTab.getTextArea());
-    
-//    System.out.println("will digest");
-    
     String fullyDigested = Lexer.digestAll(gCodeTab.getTextArea().getText());
     
-//    System.out.println("digest done");
-    
-    /*
-  	StringBuffer theBuffer = new StringBuffer();
-  	
-  	// BUG: I think I got rid of the possibility of an exception here.
-  	// No longer need try/catch.
-  	// In fact, get rid of this. It's been improved and simplified above.
-  	try {
-  	  Lexer theLexer = new Lexer(theText);
-  	  Token tok = theLexer.getToken();
-//  	  int c = 0;
-  	  while (tok.letter != Token.EOF)
-  	    {
-//  	      c++;
-//  	      theBuffer.append(tok.lineNumber+ "\t" +tok.letter+ "\t" +tok.i+ "\t" +
-//  	          tok.d+ "\t" +tok.error+ "\n");
-  	      
-  	      // Errors only:
-//          if (tok.error != null)
-//            theBuffer.append(tok.error+ "\n");
-  	      
-  	      // BUG: Use Token.toString() instead.
-  	      
-  	      theBuffer.append(tok.lineNumber+ "\t");
-  	      
-  	      if (tok.letter == Token.EOL)
-  	        theBuffer.append(";\n");
-  	      else if (tok.letter == Token.WIZARD)
-  	        theBuffer.append("extern\t" + tok.wizard + "\n");
-  	      else if (tok.letter == Token.STRING)
-            theBuffer.append("string\t" + tok.wizard + "\n");
-  	      else if (tok.letter == Token.NUMBER)
-            theBuffer.append("num\t" + tok.d + "\n");
-  	      else if (tok.letter == Token.ERROR)
-  	        theBuffer.append("error\t" + tok.error + "\n");
-  	      else
-  	        // Normal G-code
-  	        theBuffer.append(tok.letter+ "\t" +tok.i+ "\t" + tok.d + "\n");
-  	        
-  	      tok = theLexer.getToken();
-  	    }
-  	} catch (Exception e) {
-  	  JOptionPane.showMessageDialog(this,e.getMessage());
-  	  e.printStackTrace();
-  	  return;
-  	}
-  	
-  	// Create a new tab, considering the possibility that this might be
-  	// a re-do and the tab already exists.
-  	if (gCodeTab.lexOut != null)
-  	  {
-  	    LexerTab lexerOutput = gCodeTab.lexOut;
-  	    lexerOutput.theText.setText(theBuffer.toString());
-  	  }
-  	else
-  	  {
-      	LexerTab lexerOutput = new LexerTab(theBuffer.toString(),gCodeTab);
-      	theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Lexer",lexerOutput);
-      	gCodeTab.lexOut = lexerOutput;
-  	  }
-  	*/
-
     // Create a new tab, considering the possibility that this might be
     // a re-do and the tab already exists.
     if (gCodeTab.lexOut != null)
@@ -442,60 +372,35 @@ public class MainWindow extends JFrame
         return;
 
     Component curTabComponent = theTabs.getComponentAt(curTabIndex);
-    
     TypedDisplayItem curTabTyped = (TypedDisplayItem) curTabComponent;
     if (curTabTyped.type() != TabbedType.G_INPUT)
       // Only makes sense for input G-code.
       return;
     
     GInputTab gCodeTab = (GInputTab) curTabComponent;
-    TextBuffer theText = new TextBuffer(gCodeTab.getTextArea().getText());
     
-  	Translator trans = null;
-  	try {
-  		trans = new Translator(layer,theText
-  		    //,true,scale,materialX,materialY,materialZ,
-  				//przX,przY,przZ,X0,Y0,Z0,turret,workOffsets
-  		    );
-  	} catch (Exception e) {
-  		JOptionPane.showMessageDialog(this,e.getMessage());
-//  		System.err.println(e.getMessage());
-  		return;
-  	}
-  	
-  	StringBuffer theBuffer = new StringBuffer();
-  	
-  	// BUG: What is this for???
-//  	theBuffer.append("O9999\n");
+  	// BUG: Get rid of exception?
   	
   	try {
-  		String line = trans.nextStatement();
-  		while (line != null)
-  			{
-  				theBuffer.append(line);
-  				theBuffer.append("\n");
-  				line = trans.nextStatement();
-  			}
-  	} catch (Exception e) {
-  		JOptionPane.showMessageDialog(this,e.getMessage());
-//		System.out.println("problem: " +e);
-//		e.printStackTrace();
-  		return;
-  	}
+  	  String fullyDigested = 
+  	      Translator.digestAll(gCodeTab.getTextArea().getText(),layer);
 
-    // Create a new tab, considering the possibility that this might be
-    // a re-do and the tab already exists.
-    if (gCodeTab.parseOut != null)
-      {
-        ParserTab parseOutput = gCodeTab.parseOut;
-        parseOutput.theText.setText(theBuffer.toString());
-      }
-    else
-      {
-        ParserTab parseOutput = new ParserTab(theBuffer.toString(),gCodeTab);
-        theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",parseOutput);
-        gCodeTab.parseOut = parseOutput;
-      }
+      if (gCodeTab.parseOut != null)
+        {
+          ParserTab parseOutput = gCodeTab.parseOut;
+          parseOutput.theText.setText(fullyDigested);
+        }
+      else
+        {
+          ParserTab parseOutput = new ParserTab(fullyDigested,gCodeTab);
+          theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",parseOutput);
+          gCodeTab.parseOut = parseOutput;
+        }
+    
+  	} catch (Exception e) {
+      JOptionPane.showMessageDialog(this,e.getMessage());
+      return;
+  	}
   }
   
   /*

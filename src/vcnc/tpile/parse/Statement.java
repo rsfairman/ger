@@ -21,7 +21,9 @@ public class Statement {
 	public static final short EOF 	=  1;
 	public static final short G00		=  2;		// rapid mode
 	public static final short G01		=  3;		// normal mode
-	public static final short N			=  5;		// line number. BUG: currently ignored.
+	public static final short N			=  5;		
+	    // line number. BUG: I think these are weeded out of the input
+	    // and should never appear as statements, so get rid of this?
 	public static final short M05		=  6;		// spindle off
 	public static final short M00   =  7;   // Hard program stop
 	public static final short M01   =  8;   // Optional program stop
@@ -57,10 +59,16 @@ public class Statement {
 	public static final short G57   = 38;
 	public static final short G58   = 39;
 	public static final short G59   = 40;
+	public static final short G28   = 100; // BUG: Not implemented in translator?
 	
 	// This is used for G/M-codes that Ger doesn't know what to do with.
-	// By default they pass through the entire translation process unchanged. 
-	public static final short PASS = 500;
+	// By default they pass through the entire translation process unchanged.
+	// BUG: After some thought, I don't think this makes sense. The idea
+	// was to allow certain codes that might make sense on a physical machine
+	// pass through the entire translation unchanged. That's fine in theory,
+	// but I need to be able to parse these thing to Statement objects, and 
+	// if I don't know what they do, then that is hard. 
+//	public static final short PASS = 500;
 	
 	
 	// These are more complex statements that do require some additional data.
@@ -72,8 +80,8 @@ public class Statement {
 	public static final short IJK   = 10005;	// For circles, requires coordinates in data.
 	public static final short LINE  = 10006;  // Line number. BUG: Used?
 	public static final short PROG  = 10007;	// Program number -- an O-command like O1234
-	public static final short G02   = 10008;  // CW cirucular interpolation.
-	public static final short G03   = 10009;  // CCW cirucular interpolation.
+	public static final short G02   = 10008;  // CW circular interpolation.
+	public static final short G03   = 10009;  // CCW circular interpolation.
 	public static final short G41   = 10010; 	// Cutter comp left.
 	public static final short G42		= 10011;	// Cutter comp right.
 	public static final short G43   = 10012;	// TLO, positive.
@@ -88,11 +96,11 @@ public class Statement {
 	// One of the constants above.
 	public short type;
 	
-	// Line number on which statement occured. Needed to report errors.
+	// Line number on which statement occurred. Needed to report errors.
 	// This is the line number with respect to carriage returns, not N-codes.
 	public int lineNumber;
 	
-  // The character count, in the entire program, at which this statment
+  // The character count, in the entire program, at which this statement
   // starts. We need this to return from subroutines.
   public int charNumber;
 	
@@ -102,11 +110,11 @@ public class Statement {
   // If this is true, then the error above is merely a warning
   public boolean warning = false;
 	
-	// This will often be empty. For the first set of simple statements (the ones
+	// This will often be null. For the first set of simple statements (the ones
 	// that use a low number for the type), this will be null. It will be non-null 
 	// for the more complex statements. The exact nature of the data depends on 
 	// the statement.
-	public StateData	data = null;
+	public StatementData	data = null;
 	
 	public Statement() {
 	  // Do-nothing.
@@ -161,25 +169,25 @@ public class Statement {
 				case G59		: return(String.format("N%05d\tG59",lineNumber));
 				
 				case M03		: answer = String.format("N%05d\tM03 ",lineNumber);
-											IntState state = (IntState) data;
+											DataInt state = (DataInt) data;
 											answer += String.format("S%3d",state.value);
 											return answer;
 				case M04		: answer = String.format("N%05d\tGM04 ",lineNumber);
-											state = (IntState) data;
+											state = (DataInt) data;
 											answer += String.format("S%03d",state.value);
 											return answer;
 				case M06		: answer = String.format("N%05d\tGM06 ",lineNumber);
-											state = (IntState) data;
+											state = (DataInt) data;
 											answer += String.format("T%02d",state.value);
 											return answer;
 				case M98		: answer = String.format("N%05d\tM98 ",lineNumber);
-											SubroutineCall call = (SubroutineCall) data;
+											DataSubroutineCall call = (DataSubroutineCall) data;
 											answer += String.format("P%05d ",call.programNumber);
 											if (call.invocations > 1)
 												answer += String.format("L%04d",call.invocations);
 											return answer;
 				case MOVE		: answer = String.format("N%05d\t",lineNumber);
-											MoveState theMove = (MoveState) data;
+											DataMove theMove = (DataMove) data;
 											if (theMove.xDefined == true)
 												answer += "X"+String.format("%+07.3f\t",theMove.xValue);
 											else
@@ -196,11 +204,11 @@ public class Statement {
 				case IJK		: return String.format("N%05d\tIJK Weirdness",lineNumber);
 				case LINE		: return("");
 				case PROG		: answer = String.format("N%05d\t",lineNumber);
-											SubProgState ovalue = (SubProgState) data;
+											DataSubProg ovalue = (DataSubProg) data;
 											answer += String.format("O%05d",ovalue.progNumber);
 											return answer;
 				case G02		: answer = String.format("N%05d\tG02 ",lineNumber);
-											Circular circ = (Circular) data;
+											DataCircular circ = (DataCircular) data;
 											if (circ.xDefined)
 												answer += String.format("X%+07.3f\t",circ.X);
 											else
@@ -233,7 +241,7 @@ public class Statement {
 												answer += String.format("F%05.2f ",circ.F);
 											return answer;
 				case G03		: answer = String.format("N%05d\tG03 ",lineNumber);
-											circ = (Circular) data;
+											circ = (DataCircular) data;
 											if (circ.xDefined)
 												answer += String.format("X%+07.3f\t",circ.X);
 											else
@@ -266,27 +274,27 @@ public class Statement {
 												answer += String.format("F%5.2f ",circ.F);
 											return answer;
 				case G41		: answer = String.format("N%05d\tG41 ",lineNumber);
-											RegisterState r = (RegisterState) data;
+											DataRegister r = (DataRegister) data;
 											if (r.D) answer += "D"; else answer += "H";
 											answer += String.format("%02d",r.regValue);
 											return answer;
 				case G42		: answer = String.format("N%05d\tG42 ",lineNumber);
-											r = (RegisterState) data;
+											r = (DataRegister) data;
 											if (r.D) answer += "D"; else answer += "H";
 											answer += String.format("%02d",r.regValue);
 											return answer;
 				case G43		: answer = String.format("N%05d\tG43 ",lineNumber);
-											r = (RegisterState) data;
+											r = (DataRegister) data;
 											if (r.D) answer += "D"; else answer += "H";
 											answer += String.format("%02d",r.regValue);
 											return answer;
 				case G44		: answer = String.format("N%05d\tG44 ",lineNumber);
-											r = (RegisterState) data;
+											r = (DataRegister) data;
 											if (r.D) answer += "D"; else answer += "H";
 											answer += String.format("%02d",r.regValue);
 											return answer;
 				case G52		: answer = String.format("N%05d\tG52 ",lineNumber);
-											theMove = (MoveState) data;
+											theMove = (DataMove) data;
 											if (theMove.xDefined == true)
 												answer += "X"+String.format("%+07.3f\t",theMove.xValue);
 											if (theMove.yDefined == true)
@@ -294,7 +302,7 @@ public class Statement {
 											if (theMove.zDefined == true)
 												answer += "Z"+String.format("%+07.3f\t",theMove.xValue);
 											return answer;
-				case WIZARD : Wizard wiz = (Wizard) this.data;
+				case WIZARD : DataWizard wiz = (DataWizard) this.data;
 				              answer = wiz.cmd;
 				              for (int i = 0; i < wiz.args.size(); i++)
 				                {

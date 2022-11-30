@@ -3,7 +3,7 @@ package vcnc.tpile;
 /*
 
 Use this to create a buffered interface to a String. The built-in StringBuffer 
-class sounds like what I ought to use, making this redundant, but StringBuffer
+class sounds like the thing to use, making this redundant, but StringBuffer
 has a *mutable* sequence of characters. The built-in StringReader class is 
 almost what I want, but that class has no peek() method for looking at the 
 next character without moving the mark. In theory, StringReader could be used 
@@ -17,11 +17,9 @@ the String. It depends on how Java defines Strings internally
 and how charAt() is implemented. Realistically, this shouldn't make a big
 difference either way, so go with the shorter/simpler code. 
 
-BUG: Rename the class to something like PeakableStringStream.
-
 */
 
-public class TextBuffer {
+public class CodeBuffer {
   
   private String theText = null;
   
@@ -30,7 +28,7 @@ public class TextBuffer {
   private int mark = 0;
   
   
-  public TextBuffer(String theText) {
+  public CodeBuffer(String theText) {
     
     this.theText = theText;
     this.mark = 0;

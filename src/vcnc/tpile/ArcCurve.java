@@ -1,7 +1,7 @@
 package vcnc.tpile;
 
-import vcnc.tpile.parse.Circular;
-import vcnc.tpile.parse.StateData;
+import vcnc.tpile.parse.DataCircular;
+import vcnc.tpile.parse.StatementData;
 import vcnc.tpile.parse.Statement;
 
 
@@ -53,7 +53,7 @@ public class ArcCurve extends ToolCurve {
     else
       cw = false;
     
-    Circular theState = (Circular) cmd.data;
+    DataCircular theState = (DataCircular) cmd.data;
     
     this.x0 = x0;
     this.y0 = y0;
@@ -723,12 +723,12 @@ public class ArcCurve extends ToolCurve {
     setAngles();
   }
 
-  public StateData toState() {
+  public StatementData toState() {
       
     // This allocates a new object. The caller must delete it.
     // This always produces a center based on I/J/K, no matter how this curve
     // was originally given (so, no radius given).
-    Circular theState = new Circular();
+    DataCircular theState = new DataCircular();
     
     theState.rDefined = false;
     theState.F = this.feedRate;

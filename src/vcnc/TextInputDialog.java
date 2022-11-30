@@ -9,6 +9,9 @@ package vcnc;
 // getInputs() returns null, then the user canceled. If the user chose "OK", then 
 // getInputs() returns the text typed by the user for each field.
 
+// BUG: Not sure whether this is the right thing to use. In any case, this
+// feels a lot like other more general UI tools I've written.
+
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JPanel;

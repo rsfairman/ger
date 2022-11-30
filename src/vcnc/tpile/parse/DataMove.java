@@ -1,10 +1,14 @@
 package vcnc.tpile.parse;
 
-// Use this for a move statement. This is also used for I,J,K settings, where
-// X, Y and Z become I, J and K.
-// NOTE the presence of the F-value here for feed rate.
+/*
 
-public class MoveState extends StateData {
+Use this for a move statement. This is also used for I,J,K settings, where
+X, Y and Z become I, J and K.
+NOTE the presence of the F-value here for feed rate.
+
+*/
+
+public class DataMove extends StatementData {
 	
 	public boolean xDefined = false;
 	public boolean yDefined = false;
@@ -20,11 +24,11 @@ public class MoveState extends StateData {
 		return xValue+ ", " +yValue+ ", " +zValue+ ", " +fValue;
 	}
 	
-	public MoveState() {
+	public DataMove() {
 		// Do nothing.
 	}
 	
-	public MoveState(boolean xd,boolean yd,boolean zd,boolean fd,
+	public DataMove(boolean xd,boolean yd,boolean zd,boolean fd,
 			double x,double y,double z,double f) {
 		
 		this.xDefined = xd;

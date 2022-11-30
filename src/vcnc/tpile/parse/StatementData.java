@@ -8,6 +8,6 @@ of the Java compiler doesn't choke.
 
 */
 
-public class StateData {
+public class StatementData {
 
 }

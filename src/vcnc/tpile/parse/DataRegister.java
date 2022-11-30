@@ -11,7 +11,7 @@ This indicates the register.
 // until Layer05. Maybe none of these StateData classes belong here.
 // Not sure.
 
-public class RegisterState extends StateData {
+public class DataRegister extends StatementData {
 
   // If this is true, then it's a D-register; otherwise, it's an H-register.
   public boolean D = true;

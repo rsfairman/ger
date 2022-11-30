@@ -5,24 +5,26 @@ package vcnc;
 //* Start with the lexer and work up to the last layer. As you reach things
 //  that need some kind of UI thing (like the tool table), write the
 //  necessary Swing.
+//
 // don't forget to update the dev manual.
 //
-// I think the lexer is good...see about how to do unit tests...
+// I think the lexer is good
 // 
-// Change TextBuffer so that the constructor takes a String (or ??) and
-// the same for TextGetter. 
-//
-// Change the Lexer to have a single "digest all" method that returns a 
-// String suitable for using in unit test and for display to the user.
+// parser too, although I'm sure errors will be uncovered in each of these 
+// layers as the next layer is created. 
 // 
-//* work offsets table and persistence framework
+// 
+// Look at the "pre" layer for wizards. Rename the layers?
+// 
+//* work offsets table and persistence framework. Easiest is probably some 
+//  kind of hidden .ger file or directory for settings.
 
 
 
 /*
 12345678901234567890123456789012345678901234567890123456789012345678901234567890
 
-Compiling
+Compiling:
 
 Obviously, Eclipse is the easy way, with no additional tools needed.
 
@@ -115,12 +117,41 @@ previous version.
 
 The whole TextGetter/TextBuffer thing was overkill. They've been combined to a 
 single class and it no longer does any buffering on it's own. It just uses 
-String.charAt().
+String.charAt(). 
 
 Moved some of the files around so that all the code related to transpiling
 is in vcnc.tpile, whether directly under it, or in a sub-package.
 
 v06
+
+Renamed the single TextBuffer class to CodeBuffer for clarity.
+
+Simplified the primary switch statement in Parser so that the error cases
+are all handled together -- much briefer now.
+
+Got rid of the idea of letting unknown, but potentially meaningful, commands
+pass through the translator unchanged. The idea was that something like 
+G83 (peck drilling) might exist on a particular physical machine and I don't
+want to strip it out of the program or flag it as an error since the user may
+want to use it. But if the command and its quirks is unknown to me, then it's
+difficult to parse. In theory, I could just take everything from 'G83' (or 
+whatever) to the EOL and call that a command and assume that it's valid on 
+the target machine. But my impression is that some of these commands differ so
+much from one physical machine to another that this is only going to confuse
+things. It will also be impossible to render what these commands do as a 
+3D image.
+
+One solution to this problem is to define anything like this as a wizard.
+For example, instead of 'G83', the user would say something like 'Peck'
+and the wizard would convert to more basic G-codes -- which is what something
+like a FANUC must be doing anyway. Another solution would be to provide a
+selection of physical machines that the program is able to simulate and then 
+implement the various codes available on each machine, but that is a huge 
+research project.
+
+Renamed various classes related to the data associated with statements.
+These are the classes that extend StateData, which is now called StatementData
+to make it clear that it's not about "state" particularly.
 
 
 
@@ -160,12 +191,6 @@ about v05.
 
 
 
-I need to make some decisions about "home" and coordinate systems.
-For example, G28 is "return to home" but what does "home" mean?
-
-Add a WorkOffset command. 
-
-Great input for tool table. By default, use tool 1.
 
 
 
@@ -184,33 +209,10 @@ TODO:
 * I need to insert the G/M/whatever wizard interpreter after the lexer
   and before the parser. Some odd G-code might expect certain arguments
   and the parser needs to know what those are.
- 
-* Idea: certain G-codes, like G81 for peck drilling, are very specific to
-  the controller. I do not want this thing to interpret these; let them pass
-  through the interpreter untouched. OTOH, I can imagine that this would be
-  frustrating to some users. What's needed is a way to allow the user to
-  define certain G-codes for HIS machine. This is a bit like externally
-  defined wizards, but with a more restricted syntax. Ideally, we should allow
-  them to define a function, together with a choice of the layer of 
-  transpilation at which the translation is injected. 
-  
-  In fact, choosing the layer of injection would be good for ordinary wizards
-  too. 
-
-* After using and exercising things a bit, come back to the TabbedPaneDnD
-  stuff and clean up some more. I might even put things back into fewer files.
-  There's really only one front-end class.
-  
-  Really, Only one class in the TabbedPaneDnD package should be public.
 
 * What about text size and fonts in general?
 
 * Track file dirty
-
-* Make the lexer output nicer too, with column labels. OTOH, you couldn't
-  then parse the lexers output -- or would have to strip off the first line.
-  
-  It uses TextBuffer (and TextGetter?). Clean those up too.
 
 * How to report errors?
   Maybe assume that if a layer completes, then there were no errors
@@ -218,16 +220,6 @@ TODO:
   halt the entire thing, print out the error message and go to the relevant
   line.
 
-* Double-click or something to make tabs into their own windows.
-  
-  See https://docs.oracle.com/javase/tutorial/uiswing/components/tabbedpane.html
-  I want close exes, and some kind of "expand" icon.
-
-* I am kind of dumping stuff into random places. Give the packages better names.
-
-* 
-
-*
 
 */
 
@@ -310,8 +302,12 @@ public class Main {
     // To run the units tests.
     // You can run any or all of these, and the test of each layer may
     // consist of several individual tests.
-    UnitTests.testLexer();
+    System.out.println("Running unit tests...");
     
+    UnitTests.testLexer();
+//    UnitTests.testParser();
+    
+    System.out.println("Unit tests complete.");
     
   }
 

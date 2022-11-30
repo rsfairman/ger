@@ -27,9 +27,9 @@ import javax.tools.JavaCompiler;
 import vcnc.tpile.parse.Parser;
 import vcnc.tpile.parse.Statement;
 import vcnc.tpile.parse.StatementBuffer;
-import vcnc.tpile.parse.SubProgState;
-import vcnc.tpile.parse.SubroutineCall;
-import vcnc.tpile.parse.Wizard;
+import vcnc.tpile.parse.DataSubProg;
+import vcnc.tpile.parse.DataSubroutineCall;
+import vcnc.tpile.parse.DataWizard;
 import vcnc.wizard.WizardBase;
 
 
@@ -46,7 +46,7 @@ public class LayerPre {
   private boolean seenOCommand = false;
   
   
-  public LayerPre(TextBuffer theText) throws Exception {
+  public LayerPre(CodeBuffer theText) throws Exception {
     
     this.theParser = new Parser(theText);
     
@@ -91,7 +91,7 @@ public class LayerPre {
         else if (s.type == Statement.WIZARD)
           {
             // Wizards don't expand to anything when they appear before
-            // the O-commnand.
+            // the O-command.
             if (this.seenOCommand == false)
               {
                 
@@ -100,8 +100,7 @@ public class LayerPre {
                   doSetupWizard(s);
                 } catch (Exception e) {
                   // An error in a setup wizard *does* generate a Statement.
-                  Statement err = new Statement();
-                  err.type = Statement.ERROR;
+                  Statement err = new Statement(Statement.ERROR);
                   err.error = formError(s.lineNumber,e.getMessage());
                   buf.add(err);
                   ++i;
@@ -133,7 +132,7 @@ public class LayerPre {
     // For the wizards that may appear before the O-command that starts the
     // program. These are to set up the machine state -- things like the
     // work offsets table.
-    Wizard wiz = (Wizard) w.data;
+    DataWizard wiz = (DataWizard) w.data;
     if (wiz.cmd.equals("SetUnits"))
       {
         if (wiz.args.size() != 1)
@@ -159,7 +158,7 @@ public class LayerPre {
     
     // Convert the given wizard statement to a series of straight G-code
     // Statements.
-    Wizard wiz = (Wizard) w.data;
+    DataWizard wiz = (DataWizard) w.data;
     
     System.out.println("listing classes");
     

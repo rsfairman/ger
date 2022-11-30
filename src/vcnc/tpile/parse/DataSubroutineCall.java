@@ -2,7 +2,7 @@ package vcnc.tpile.parse;
 
 // To specify the nature of a call to a subroutine.
 
-public class SubroutineCall extends StateData {
+public class DataSubroutineCall extends StatementData {
 	
 	 // Which subroutine to call. This is the program number: O[###].
 	public int programNumber = 0;

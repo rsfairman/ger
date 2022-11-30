@@ -25,6 +25,8 @@ and strings. The function call is terminated by new-line or semicolon.
 Note that, for G/M-codes that are unknown to the system, the lexer assumes
 that they follow the usual form. That is, after the initial G/M-whatever,
 there will be a series of letter/number pairs.
+BUG: G/M codes "unknown to the system" are now treated as errors. At least
+I think that's what we'll settle on. 
  
 */
 
@@ -56,6 +58,15 @@ public class Token {
   // G-code, then any additional whole number after the decimal appears here.
   // A more theoretically correct approach would be to treat these codes as
   // strings, but that's messier to code.
+  // 
+  // Note that this is not really used in practice. These commands, that use
+  // a decimal point in their number, vary too much from machine to machine
+  // to be handled with a reasonable amount of effort. See the comment in Main
+  // for v06.
+  //
+  // BUG: If I firmly choose to abandon handling these kinds of G-codes, then
+  // I could get rid of this and there are some minor simplifications this
+  // would permit in the lexer too.
   public int isub = -1;
   
   // And externally defined functions (wizards) have a name.

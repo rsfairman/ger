@@ -14,8 +14,8 @@ import java.util.Stack;
 
 import vcnc.tpile.parse.Parser;
 import vcnc.tpile.parse.Statement;
-import vcnc.tpile.parse.SubProgState;
-import vcnc.tpile.parse.SubroutineCall;
+import vcnc.tpile.parse.DataSubProg;
+import vcnc.tpile.parse.DataSubroutineCall;
 
 
 public class Layer00 {
@@ -34,7 +34,7 @@ public class Layer00 {
   // BUG: Allow the user to control this?
   private int MaxStackDepth = 500;
   
-  public Layer00(TextBuffer theText) throws Exception {
+  public Layer00(CodeBuffer theText) throws Exception {
 
     this.theParser = new Parser(theText);
     
@@ -53,7 +53,7 @@ public class Layer00 {
         if (cmd.type == Statement.PROG)
           {
             // Found a program statement.
-            SubProgState subState = (SubProgState) cmd.data;
+            DataSubProg subState = (DataSubProg) cmd.data;
             
             // We need to note the place (line and character count) at which
             // the sub-program starts. This is the line and character *after*
@@ -129,7 +129,7 @@ public class Layer00 {
     
     // Look up the location of the subroutine. We get the character number to
     // jump to, along with the line on which it occurs.
-    SubroutineCall call = (SubroutineCall) cmd.data;
+    DataSubroutineCall call = (DataSubroutineCall) cmd.data;
     
     // Doing a map lookup.
     int[] subProgLookup = subprogs.dict.get(call.programNumber);

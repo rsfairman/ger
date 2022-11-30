@@ -1,9 +1,9 @@
 package vcnc.tpile;
 
-import vcnc.tpile.parse.Circular;
-import vcnc.tpile.parse.MoveState;
+import vcnc.tpile.parse.DataCircular;
+import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.Statement;
-import vcnc.tpile.parse.TLOState;
+import vcnc.tpile.parse.DataTLO;
 
 
 
@@ -11,7 +11,7 @@ public class Layer02 {
   
   private Layer01 lowerLayer = null;
   
-  public Layer02(TextBuffer theText) throws Exception {
+  public Layer02(CodeBuffer theText) throws Exception {
     
     lowerLayer = new Layer01(theText);
     
@@ -76,7 +76,7 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
       // It doesn't make sense since incremental moves are *relative*.
       return;
     
-    MoveState theMove = (MoveState) cmd.data;
+    DataMove theMove = (DataMove) cmd.data;
     if (MachineState.usingPolar == false)
       {
         // Ordinary line.
@@ -134,7 +134,7 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
       // Nothing to do in incremental mode.
       return;
     
-    Circular theMove = (Circular) cmd.data;
+    DataCircular theMove = (DataCircular) cmd.data;
     
     // Note that we are not adjusting I/J/K. These are relative values,
     // so they need no adjustment.
@@ -192,7 +192,7 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
       }
     
     // Get the register value.
-    TLOState reg = (TLOState) cmd.data;
+    DataTLO reg = (DataTLO) cmd.data;
     double h = 0.0;
     if (reg.hRegister > ToolTurret.TableSize)
       {
@@ -217,7 +217,7 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
         double newZ = reg.zValue;
         
         cmd.type = Statement.MOVE;
-        MoveState data = new MoveState();
+        DataMove data = new DataMove();
         cmd.data = data;
         
         data.zDefined = true;
@@ -257,7 +257,7 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
       {
         // Kind of a special case. The offset is given with the command rather
         // than pulled out of the work offset table.
-        MoveState move = (MoveState) cmd.data;
+        DataMove move = (DataMove) cmd.data;
         
         MachineState.offsetX = move.xValue;
         MachineState.offsetY = move.yValue;

@@ -1,7 +1,7 @@
 package vcnc.tpile;
 
 
-import vcnc.tpile.parse.StateData;
+import vcnc.tpile.parse.StatementData;
 import vcnc.tpile.parse.Statement;
 
 
@@ -44,7 +44,7 @@ abstract public class ToolCurve {
   
   // Take this ToolCurve, and convert it to either a MoveState or a
   // CircularState. That's what the interpreter works with.
-  public abstract StateData toState();
+  public abstract StatementData toState();
   
   // Similar to toState(), but also fills in the type.
   public abstract void toStatement(Statement cmd);

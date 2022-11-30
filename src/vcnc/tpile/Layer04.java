@@ -1,7 +1,7 @@
 package vcnc.tpile;
 
-import vcnc.tpile.parse.Circular;
-import vcnc.tpile.parse.MoveState;
+import vcnc.tpile.parse.DataCircular;
+import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.Statement;
 
 
@@ -24,7 +24,7 @@ public class Layer04 {
   private double Z0;
   
   
-  public Layer04(TextBuffer theText,double X0,double Y0,double Z0)
+  public Layer04(CodeBuffer theText,double X0,double Y0,double Z0)
       throws Exception {
     ;
     this.lowerLayer = new Layer03(theText,X0,Y0,Z0);
@@ -57,7 +57,7 @@ public class Layer04 {
   private void handleLine(Statement cmd) {
     
     // Convert from incremental to absolute coordinates.
-    MoveState theMove = (MoveState) cmd.data;
+    DataMove theMove = (DataMove) cmd.data;
     
     if (MachineState.absolute == true)
       {
@@ -114,7 +114,7 @@ public class Layer04 {
   private void handleArc(Statement cmd) {
     
     // Convert from incremental to absolute coordinates.
-    Circular theMove = (Circular) cmd.data;
+    DataCircular theMove = (DataCircular) cmd.data;
     
     if (MachineState.absolute == true)
       {

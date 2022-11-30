@@ -1,20 +1,15 @@
 package vcnc.tpile;
 
-import vcnc.tpile.parse.Parser;
-import vcnc.tpile.parse.Statement;
-
 /*
 
 Essentially a front-end to the transpiler. It allows one to transpile to
 varying levels/layers.
 
+
 */
 
-//import tooltable.ToolTurret;
-//import ui.TextBuffer;
-//import workoffsets.WorkOffsets;
-//import parser.Statement;
-//import parser.Parser;
+import vcnc.tpile.parse.Parser;
+import vcnc.tpile.parse.Statement;
 
 
 public class Translator {
@@ -32,9 +27,11 @@ public class Translator {
 	private Layer04 L04 = null;
 	private Layer05 L05 = null;
 	
-	public Translator(
+	// BUG: Can I get rid of the exception here?
+	
+	private Translator(
 	    int depth,
-	    TextBuffer theText
+	    String gCode
 	    //boolean inch,double scale,
 			//double materialX,double materialY,double materialZ,
 			//double przX,double przY,double przZ,
@@ -42,37 +39,50 @@ public class Translator {
 			//ToolTurret turret,WorkOffsets offsets
 			) throws Exception {
 		;
-		// This is just like invoking the Interpreter, but add an interger for the 
+		
+		// Note that this is a private constructor. The only way to access this
+		// class is through the static digestAll() method.
+		// 
+		// This is just like invoking the Interpreter (BUG: Interpreter no longer
+		// exists? Was this the pulse generator?), but add an integer for the 
 		// layer you want. depth = 0 gives the output of Layer00, etc. depth == -1
 		// gives the parser and depth == 5 gives the output of Layer05, which is the
 		// same as the input to the interpreter and is the final layer.
 		this.depth = depth;
 		
+		CodeBuffer buf = new CodeBuffer(gCode);
+		
 		switch (depth)
 			{
-				case -1	: P = new Parser(theText);
+				case -1	: P = new Parser(buf);
 									break;
-				case -2 : pre = new LayerPre(theText);
+				case -2 : pre = new LayerPre(buf);
 				          break;
-				case 0	: L00 = new Layer00(theText);
+				case 0	: L00 = new Layer00(buf);
 									break;
-				case 1	: L01 = new Layer01(theText);
+				case 1	: L01 = new Layer01(buf);
 									break;
-				case 2  : L02 = new Layer02(theText);
+				case 2  : L02 = new Layer02(buf);
 									break;
-				case 3  : L03 = new Layer03(theText,0.0,0.0,0.0);
+				case 3  : L03 = new Layer03(buf,0.0,0.0,0.0);
 									break;
-				case 4  : L04 = new Layer04(theText,0.0,0.0,0.0);
+				case 4  : L04 = new Layer04(buf,0.0,0.0,0.0);
 									break;
-				case 5  : L05 = new Layer05(theText,0.0,0.0,0.0);
+				case 5  : L05 = new Layer05(buf,0.0,0.0,0.0);
 									break;
 				default : 
-					throw new Exception("Unknown interpreter depth requested");
+				  // This *really* shouldn't happen.
+				  System.err.println("Error in the code: unknown Translator depth."); 
+				  System.exit(0);
 			}
 	}
 	
-	public String nextStatement() throws Exception {
+	private String nextStatement() throws Exception {
 		
+	  // Returns the next Statement in String form.
+	  
+	  // BUG: Try to get rid of exceptions
+	  
 		Statement cmd = null;
 		
 		switch (depth)
@@ -86,8 +96,9 @@ public class Translator {
 				case 4	: cmd = L04.nextStatement(); break;
 				case 5	: cmd = L05.nextStatement(); break;
 				
-				// BUG: Shouldn't happen
-				default : System.err.println("fell through in Translator");
+				default : 
+				  System.err.println("fell through in Translator");
+				  System.exit(0);
 			}
 		
 		if (cmd == null)
@@ -97,4 +108,25 @@ public class Translator {
 		
 		return cmd.toString();
 	}
+	
+  public static String digestAll(String gcode,int depth) throws Exception {
+    
+    // Run all of the G-code that was provided to the constructor through
+    // the translation process up to the layer given to the constructor.
+    
+    // BUG: Get rid of throwing exception?
+    Translator trans = new Translator(depth,gcode);
+    
+    StringBuffer theBuffer = new StringBuffer();
+    
+    String smnt = trans.nextStatement();
+    while (smnt != null)
+      {
+        theBuffer.append(smnt);
+        theBuffer.append("\n");
+        smnt = trans.nextStatement();
+      }
+    
+    return theBuffer.toString();
+  }
 }

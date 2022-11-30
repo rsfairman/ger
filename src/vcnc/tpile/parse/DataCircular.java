@@ -2,13 +2,10 @@ package vcnc.tpile.parse;
 
 // Used with circular interpolation.
 
-// BUG: Change name to CircularState or CircularStateData or CircularData
-// to be consistent.
-
-public class Circular extends StateData {
+public class DataCircular extends StatementData {
 	
-	// Circular interpolation can be specified based on I/J/K (relative) or with X/Y/Z 
-	// (absolute) or with the radius.
+	// Circular interpolation can be specified based on I/J/K (relative) or with 
+  // X/Y/Z (absolute) or with the radius.
 	public boolean rDefined = false;
 	public boolean xDefined = false;
 	public boolean yDefined = false;

@@ -1,12 +1,12 @@
 package vcnc.tpile.lex;
 
-import vcnc.tpile.TextBuffer;
+import vcnc.tpile.CodeBuffer;
 
 
 public class Lexer {
   
   // This is where the characters of code come from.
-  private TextBuffer theCode = null;
+  private CodeBuffer theCode = null;
   
   // The line currently being read. This is needed to report errors.
   private int lineCount = 1;
@@ -25,7 +25,7 @@ public class Lexer {
   private final int CommentNested = 2;
   
     
-  public Lexer(TextBuffer gCode) {
+  public Lexer(CodeBuffer gCode) {
 
     this.theCode = gCode;
     this.lineCount = 1;
@@ -41,7 +41,7 @@ public class Lexer {
     // Take the given g-code and feed it through, producing a single String
     // suitable for output to the user, or for use with unit tests.
     
-    Lexer theLexer = new Lexer(new TextBuffer(gcode));
+    Lexer theLexer = new Lexer(new CodeBuffer(gcode));
 
     StringBuffer theBuffer = new StringBuffer();
     
@@ -272,9 +272,6 @@ public class Lexer {
     while (Character.isDigit(c) || (c == '+') || (c == '-') || (c == '.'))
       {
         c = getc();
-        
-//        System.out.println("rd got char " +c);
-        
         buf = buf + Character.toString(c);
         c = peekc();
       }
@@ -592,7 +589,7 @@ public class Lexer {
     // There are only two possible types of token here: numbers and strings.
     char c = peekc();
     //System.out.println("wiz peek: " +Character.getNumericValue(c));
-    System.out.println("wiz peek: " + (short) c);
+//    System.out.println("wiz peek: " + (short) c);
     
     if (c == Token.EOF)
       {
@@ -686,7 +683,7 @@ public class Lexer {
         answer = readWizardToken();
         
         // BUG: Testing
-        System.out.println("wiz token: " +answer.toString());
+//        System.out.println("wiz token: " +answer.toString());
         
         if ((answer.letter == Token.EOL) || (answer.letter == Token.EOF))
           this.wizardMode = false;
@@ -707,7 +704,7 @@ public class Lexer {
         answer = readWord(c);
         
         // BUG: Testing
-        System.out.println("Wizard word: " +answer.toString());
+//        System.out.println("Wizard word: " +answer.toString());
         
         answer.endCount = theCode.getLastCharIndex();
         return answer;

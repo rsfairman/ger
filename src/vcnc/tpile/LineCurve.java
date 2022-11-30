@@ -1,7 +1,7 @@
 package vcnc.tpile;
 
-import vcnc.tpile.parse.MoveState;
-import vcnc.tpile.parse.StateData;
+import vcnc.tpile.parse.DataMove;
+import vcnc.tpile.parse.StatementData;
 import vcnc.tpile.parse.Statement;
 
 
@@ -15,7 +15,7 @@ public class LineCurve extends ToolCurve {
     // Do nothing.
   }
 
-  public LineCurve(double x0, double y0, double z0, MoveState data) {
+  public LineCurve(double x0, double y0, double z0, DataMove data) {
     
     // The new line starts at (x0,y0,z0) and ends at the point given by the
     // data argument.
@@ -131,10 +131,10 @@ public class LineCurve extends ToolCurve {
     this.z1 = pt.z;
   }
 
-  public StateData toState() {
+  public StatementData toState() {
     
     // This allocates a new object. The caller must delete it.
-    MoveState theState = new MoveState();
+    DataMove theState = new DataMove();
     
     theState.xDefined = true;
     theState.xValue = x1;
