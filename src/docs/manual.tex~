@@ -27,26 +27,34 @@
 %\newcommand{\mymargin}[1]{\marginpar{\rm\scriptsize #1}}
 \newcommand{\leftmar}[1]{\reversemarginpar \mymargin{#1}}
 
-This is the user manual.
+\section{Yet to Do}
 
-I've included the manual for the revivied Java version and the C++
-version (which is more recent) here. There's a huge amount of overlap,
-and my intent it to pare this down as that stuff is reexpressed for
-the current version.
-
-\vskip 0.3cm
-\hrule
-\vskip 0.3cm
-
-When the user opens a G-code file, a new tab appears in the main
-window. By default, anything that ``comes from'' this file also
-appears in a tab in the main window. If a given bit of G-code is used
-to create (say) lexer output, then that output will appear in the main
-window. 
-
-\vskip 0.3cm
-\hrule
-\vskip 0.3cm
+There's a long list of things wrong with this. It's semi-usable, but
+here's a list of things to revisit (or visit).
+\begin{itemize}
+\item The way tabs work with windows -- drag \& drop, and the way the
+  data for each tab is associated with internal data structures.
+\item Allow user to specify font size (and maybe the font, although
+  any sane person will want a mono-spaced font).
+\item The line numbers are buggy. They work, but can be misalinged
+  until you scroll.
+\item The basic framework for wizard code is there, but no more than
+  the framework. In particular, the means of outputing more types of
+  {\tt Statement} needs to be fleshed out.
+\item Certain wizards (like Bezier curves) should have a UI specific
+  to them. Other UIs might be handy too (bolt circles), but are less
+  necessary. None of these wizards exist yet in any form.
+\item The ``machine setup'' wizard framework is also minimal. This is
+  for things like specifying the tool table, work offsets table,
+  billet dimensions, etc.
+\item Exception handling could be improved. It's minimally typed for
+  one thing.
+\item Go through the code and explain (in this document) how each
+  transformation takes place. There are edge cases that might surprise
+  the user. Some of the more detailed calculations belong in the
+  developer's manual.
+\item There is no 3D rendering at all.
+\end{itemize}
 
 \section{G-Code}
 

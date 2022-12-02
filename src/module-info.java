@@ -3,7 +3,11 @@ module vcnc {
 	// For Swing (and other stuff too, no doubt).
 	requires java.desktop;
 	
-  requires java.compiler; // For javax.tools
+	 // For javax.tools
+  requires java.compiler;
+  
+  // To use java.uti.prefs.Preferences.
+  requires java.prefs;
 	
 //	requires vcnc;
 //	requires vcnc.rsf;

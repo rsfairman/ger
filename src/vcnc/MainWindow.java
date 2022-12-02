@@ -31,6 +31,10 @@ import javax.swing.JTabbedPane;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.JScrollPane;
+import javax.swing.JFileChooser;
+import javax.swing.JDialog;
+
+import java.io.File;
 
 import vcnc.ui.TabMgmt.GInputTab;
 import vcnc.ui.TabMgmt.LexerTab;
@@ -42,6 +46,7 @@ import vcnc.ui.TabbedPaneDnD.TabbedPaneDnD;
 import vcnc.util.FileIOUtil;
 import vcnc.util.LoadOrSaveDialog;
 import vcnc.util.ChoiceDialogRadio;
+import vcnc.persist.Persist;
 import vcnc.tpile.MachineState;
 import vcnc.tpile.Translator;
 import vcnc.tpile.lex.Lexer;
@@ -85,14 +90,14 @@ public class MainWindow extends JFrame
     AllWindows.add(this);
   }
   
-  public void doNew() {
+  private void doNew() {
   	
     // Create a new empty tab for inputting G-code.
     GInputTab textPanel = new GInputTab("");
     theTabs.addTab("New",textPanel);
   }
 
-  public void doOpen() {
+  private void doOpen() {
     
     // Open some G-code...
     //
@@ -127,14 +132,14 @@ public class MainWindow extends JFrame
     theTabs.addTab(fname,textPanel);
   }
   
-  public void doClose() {
+  private void doClose() {
   	
   	// Close file associated with top-most tab.
     int curTab = theTabs.getSelectedIndex();
     theTabs.removeTabAt(curTab);
   }
   
-  public void saveToFile() {
+  private void saveToFile() {
     
     
     // BUG: Modify...
@@ -351,7 +356,7 @@ public class MainWindow extends JFrame
   */
   
   
-  public void doSimplify(int layer) throws OutOfMemoryError {
+  private void doSimplify(int layer) throws OutOfMemoryError {
   	
   	// Run some number of layers of the transpiler. The given layer is where 
     // to stop the translation. layer == -1 means to take the output of the 
@@ -673,16 +678,21 @@ public class MainWindow extends JFrame
   }
   */
   
-  public void doWorkOffsets() { //throws OutOfMemoryError {
+  /*
+  private void doWorkOffsets() { //throws OutOfMemoryError {
   	
+    // BUG: functionality belongs elsewhere.
+    
   	// Bring up a table for work offsets. This is a JTable, something like the
     // one used for the tool table, but much simpler.
   	WorkOffsetDialog theDialog = new WorkOffsetDialog(MachineState.workOffsets);
   	theDialog.setVisible(true);
   }
+  */
   
-  
-  public void doSetMaterial() {
+  private void doSetMaterial() {
+    
+    // BUG: functionality belongs elsewhere.
   	
   	// Specify the shape and dimensions of the billet along with the location
   	// of the PRZ and the starting position of the tool.
@@ -775,7 +785,10 @@ public class MainWindow extends JFrame
   
   
   public void doInchOrMM() throws OutOfMemoryError {
-  	
+
+    
+    // BUG: functionality belongs elsewhere.
+    
   	// Whether the rendering process works in inches or millimeters.
   	String[] choiceText = new String[2];
     choiceText[0] = "Use inches internally";
@@ -806,11 +819,17 @@ public class MainWindow extends JFrame
     	  MachineState.machineInchUnits = false;
 //    		this.scale = 40.0;
     	}
+    
+    // Store this change
   }
   
   /*
   public void doScale() throws OutOfMemoryError {
   	
+  	// BUG: Not sure this makes sense anymore.
+  	// The only purpose for scale now is when rendering, and that should
+  	// (ideally) be done in a way that is behind-the-scenes, with no access
+  	// for the user.
   	// Scaling factor on the rendering. Effectively, this is the resolution of
   	// the table. All three axes have the same resolution.
     String[] labels = new String[1];
@@ -838,7 +857,73 @@ public class MainWindow extends JFrame
   }
   */
   
-  public void doToggleLineNumbers() {
+  private void doMachineSetup() {
+  
+    // Machine-wide settings: tool table, work offsets table, inch/mm 
+    // choice, etc.
+    //
+    // Because these things are tied together (particularly the inch/mm 
+    // choice with the others), all of these are handled by a single dialog.
+    // This should make it clear to the user that these choices are a
+    // conceptual unit.
+    MachineSetupDialog dlog = new MachineSetupDialog(this);
+    dlog.show();
+    
+    
+  }
+  
+  private void doChangeMachine() {
+    
+    // Choose a .ger directory. This has the effect of choosing a particular
+    // tool table, set of wizards, etc.
+    
+    // Make sure that they understand what they're doing.
+    // If the current .ger directory being used is *not* the default, then 
+    // don't bother asking. Of course, if the user went to a non-default
+    // directory, then came back to the default, then this will ask again,
+    // which may be mildly annoying to the user. The problem is that the
+    // alternative is to store another persistent thing (did the user turn
+    // off this message permanently using some kind of checkbox?) and that is 
+    // to be avoided.
+    if (Persist.usingDefault() == true)
+      {
+        JOptionPane sure = new JOptionPane(
+            "Are you sure that you want to change the preferences directory?\n" +
+             "Unless you want to store different machine setups, using the\n" +
+             "default preferences directory should be sufficient.",
+             JOptionPane.QUESTION_MESSAGE,JOptionPane.YES_NO_OPTION);
+        JDialog dlog = sure.createDialog(this,"Check");
+        dlog.show();
+        
+        // Result is Integer type (or null).
+        Object selected = sure.getValue();
+        if (selected == null)
+          // User closed the dialog without really answering. Treat as "no."
+          return;
+        
+        if ((Integer) selected == 1)
+          // An explicit "no."
+          return;
+      }
+    
+    // Got here, so the user really does want to change the preferences dir.
+    JFileChooser chooser = new JFileChooser(".");
+    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    
+    int returnVal = chooser.showOpenDialog(this);
+    if(returnVal != JFileChooser.APPROVE_OPTION)
+      // Must have cancelled.
+      return;
+    
+    File theDir = chooser.getSelectedFile();
+    
+//    System.out.println("You chose to open this path: " +
+//            theDir.getAbsolutePath());
+    
+    Persist.gerDir = theDir.getAbsolutePath();
+  }
+  
+  private void doToggleLineNumbers() {
   
     // Provided that the from tab of the window has G-code (the TabbedType
     // is G_INPUT), toggle display of the line numbers.
@@ -862,6 +947,7 @@ public class MainWindow extends JFrame
   public MainWindow doNewWindow() {
     
     // Create a new window, like this one, with no tabs.
+    // public because call this from main() is how the program starts.
     
     // BUG: Who owns this thing?
     MainWindow mw = new MainWindow();
@@ -946,16 +1032,10 @@ public class MainWindow extends JFrame
 //	      do3DDisplayLINE();
 //	  	else if (e.getActionCommand().equals("New Display"))
 //	      doNewDisplay();
-//	  	else if (e.getActionCommand().equals("Tool Table"))
-//	  		doToolTable();
-	  	else if (e.getActionCommand().equals("Work Offsets"))
-	  		doWorkOffsets();
-	  	else if (e.getActionCommand().equals("Inch/MM"))
-	  		doInchOrMM();
-//	  	else if (e.getActionCommand().equals("Scale"))
-//	  		doScale();
-	  	else if (e.getActionCommand().equals("Uncut Shape"))
-	  		doSetMaterial();
+	  	else if (e.getActionCommand().equals("Machine Settings..."))
+	  		doMachineSetup();
+      else if (e.getActionCommand().equals("Change Machine..."))
+        doChangeMachine();
 	  	else if (e.getActionCommand().equals("Toggle Line Numbers"))
         doToggleLineNumbers();
 	  	else if (e.getActionCommand().equals("New Window"))
@@ -1014,11 +1094,8 @@ public class MainWindow extends JFrame
     theMenuBar.add(theMenu);
     
     theMenu = new Menu("Settings",false);
-//    theMenu.add(new MenuItem("Uncut Shape"));
-//    theMenu.add(new MenuItem("Tool Table"));
-    theMenu.add(new MenuItem("Work Offsets"));
-    theMenu.add(new MenuItem("Inch/MM"));
-//    theMenu.add(new MenuItem("Scale"));
+    theMenu.add(new MenuItem("Machine Settings..."));
+    theMenu.add(new MenuItem("Change Machine..."));
     theMenu.addActionListener(this);
     theMenuBar.add(theMenu);
 

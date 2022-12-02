@@ -133,7 +133,8 @@ Got rid of the idea of letting unknown, but potentially meaningful, commands
 pass through the translator unchanged. The idea was that something like 
 G83 (peck drilling) might exist on a particular physical machine and I don't
 want to strip it out of the program or flag it as an error since the user may
-want to use it. But if the command and its quirks is unknown to me, then it's
+want to use it. Even weirder would be something like G84.3 for left-handed
+tapping. If the command and its quirks is unknown to me, then it's
 difficult to parse. In theory, I could just take everything from 'G83' (or 
 whatever) to the EOL and call that a command and assume that it's valid on 
 the target machine. But my impression is that some of these commands differ so
@@ -147,11 +148,33 @@ and the wizard would convert to more basic G-codes -- which is what something
 like a FANUC must be doing anyway. Another solution would be to provide a
 selection of physical machines that the program is able to simulate and then 
 implement the various codes available on each machine, but that is a huge 
-research project.
+research project. A middle ground, that I was considering and may eventually
+do, is to allow the user to define things like G84.3 or any G-code that is
+at all non-standard. They can define it however they like, and it would be
+implemented basically like wizards. What's needed to allow that is detecting
+these "pseudo-wizards" since wizards are currently detected based on starting
+with two letters (so, not G-number). This wouldn't be that hard.
 
 Renamed various classes related to the data associated with statements.
 These are the classes that extend StateData, which is now called StatementData
 to make it clear that it's not about "state" particularly.
+
+v07
+
+The program needs a certain amount of persistent data: things like the tool
+table or the available wizards, that should remain fixed every time the program
+is launched. The amount of data could end up being pretty extensive, so the
+most flexible way is to use a .ger directory. See vcnc.persist.Persist. 
+
+This persistent data should go together, so it makes sense for it to all be
+set as a result of a single dialog. In particular, it should be clear to the
+user that the inch/mm choice affects the tool and work offsets tables.
+
+So...reorganized the WorkOffsets stuff, mostly with regard to the UI, and
+added the vcnc.tooltable package, most of which is a mess.
+
+
+
 
 
 
@@ -178,16 +201,18 @@ from it, and copied into the new project.
         voxelframe
         workoffsets
 
-
-
-
-
-
-
-
-
 Looking at the comments for main.cpp in the C++/Qt version, I am up to 
 about v05.
+
+
+DOWN THE ROAD
+
+*** It is tempting to use a MetaPost-like language to specify bezier curves.
+I wrote a parser and interpreter for that once, and it could be brought over.
+So, have a wizard that takes a single string as argument like
+Bezier "(x1,y1)..(x2,y2)"
+
+*** 
 
 
 
@@ -231,10 +256,15 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import java.util.prefs.Preferences;
+
+import vcnc.persist.Persist;
 import vcnc.unittest.UnitTests;
 
 
 public class Main {
+  
+  
 
   private static void createAndShowGUI() {
   	
@@ -312,6 +342,9 @@ public class Main {
   }
 
   public static void main(String[] args) {
+    
+    // Load any machine settings from the .ger directory to MachineState.
+    Persist.loadSettings();
     
     // There are two ways to run the program: normally, as a gui; or to
     // do unit tests. Comment out one or the other.

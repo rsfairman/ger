@@ -668,8 +668,8 @@ public class FileIOUtil {
       fin.close();
       bout.close();
     } catch (Exception e) {
-      System.err.println("Problem: " +e);
-      e.printStackTrace();
+//      System.err.println("Problem: " +e);
+//      e.printStackTrace();
       return null;
     }
     

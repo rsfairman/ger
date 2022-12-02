@@ -63,7 +63,7 @@ mouse activity -> default DragGestureRecognizer -> TabDragGestureListener ->
 
 So the steps are: (1) TabGestureListener hears about it and gets everyone
 who might care about it ready; (2) the TabDragSourceListener and
-TabDropTargetListener hear about enters and exits relaated to potential
+TabDropTargetListener hear about enters and exits related to potential
 drops; (3) eventually, TabDragSourceListener and TabDropTargetListener hear
 about the actual drop, if any, or the fact that the drop failed or aborted.
 

@@ -2,6 +2,8 @@ package vcnc.workoffsets;
 
 // Shows a simple JTable for work offsets (G55, G56, etc).
 
+// BUG: No longer used.
+
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;

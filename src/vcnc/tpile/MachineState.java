@@ -20,13 +20,14 @@ through how each variable is used.
 */
 
 import vcnc.workoffsets.WorkOffsets;
+import vcnc.tooltable.ToolTurret;
 
 
 public class MachineState {
 
   // The tool turret. This is fixed throughout the life of each G-code
   // script, after any initial adjustments before the O-number statement.
-  public static ToolTurret turret = null;
+  public static ToolTurret turret = new ToolTurret(20);
   
   // The values to be used for G56, etc.
   public static WorkOffsets workOffsets = new WorkOffsets();

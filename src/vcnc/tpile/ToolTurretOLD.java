@@ -5,9 +5,18 @@ package vcnc.tpile;
 Holds the specification of the contents of the tool turret.
 This is set by a dialog from the main window.
 
+BUG: This is in flux. The java version and the C++ version were a little
+different. I was doing something clever(ish) in the C++ version to help
+with the rendering process. See toolspec.h/cpp, and the various "spec"
+files for different cutter types. 
+
+BUG: Don't get side-tracked on the tool table yet. The tool table
+matters most when rendering. It has very little to do with transpiling --
+but not nothing. It matters for things like cutter comp and TLO.
+ 
 */
 
-public class ToolTurret {
+public class ToolTurretOLD {
 
   // The number of tools in the turret (or slots anyway; they might be empty).
   public static int TableSize = 20;
