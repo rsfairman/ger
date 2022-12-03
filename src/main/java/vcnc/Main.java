@@ -272,8 +272,9 @@ public class Main {
   	MainWindow mainWindow = new MainWindow();
   	
   	// BUG: Testing
-  	MainWindow other = mainWindow.doNewWindow();
+//  	MainWindow other = mainWindow.doNewWindow();
   	
+/*
   	String dir = "C:\\Users\\rsf\\Documents\\WorkArea\\vcnc\\ancient\\qt dev\\vcnc\\vcnc14\\test suite";
 
     mainWindow.doOpen(dir,"layer00.txt");
@@ -283,7 +284,8 @@ public class Main {
     other.doOpen(dir,"layer03.txt");
     other.doOpen(dir,"layer04.txt");
     other.doOpen(dir,"layer05.txt");
-  	
+*/
+
   }
 	
   public static void guiMain() {
