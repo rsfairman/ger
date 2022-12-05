@@ -8,13 +8,17 @@ import vcnc.tpile.parse.Statement;
 
 All wizard definitions must extend this base class.
 
+BUG: Make abstract?
+
 */
+
 
 public class WizardBase {
   
   public ArrayList<Statement> execute() {
     
     // Override this...
+    // BUG: Should be abstract?
     return new ArrayList<Statement>(0);
   }
   

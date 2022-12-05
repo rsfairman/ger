@@ -66,7 +66,7 @@ public class Lexer {
   public void moveTo(int n,int assumedLine) {
     
     // Set the lexer to start over at the n-th character, which is assumed to be
-    // on the given line number.
+    // on the given line number. This matters for sub-programs.
     theCode.reset(n);
     this.lineCount = assumedLine;
     

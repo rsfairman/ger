@@ -5,7 +5,13 @@ package vcnc.tpile;
 BUG: See Parser. I may need to use three buffers there for the Statements
 to allow peeking forward AND back. That's what I did in the C++ version.
 I copied a comment from the C++ to Parser.java about this. There may be
-additional comments about the issue in the parser.cpp file. 
+additional comments about the issue in the parser.cpp file.
+
+BUG: Add yet another layer to remove codes that don't do anything when
+rendering (coolant, spindle speed and the like). This means that I should be 
+more careful in earlier layers about *not* stripping that stuff out.
+
+
 
 Another layer to the interpreter.
 

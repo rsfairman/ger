@@ -4,7 +4,7 @@ package vcnc.unittest;
 
 Various static methods to run the tests.
 
-Each layer of the translator, starting with the lexer, has a method, and
+Each layer of the translator, starting with the lexer, has a method below, and
 each of these methods may run several tests. Each test consists of running
 some G-code through the transpiler up to the given layer. The output of this
 run is compared to a static reference file, with all comparisons done with

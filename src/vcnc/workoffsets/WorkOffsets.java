@@ -1,9 +1,14 @@
 package vcnc.workoffsets;
 
 /*
+
 Holds the work offsets associated with G55, G56, etc.
 These values are given relative to the PRZ. Since this is an imaginary machine,
 this choice is arbitrary.
+
+BUG: This doesn't belong in this package, and the other things belong in
+some vcnc.ui package.
+
 */
 
 public class WorkOffsets {

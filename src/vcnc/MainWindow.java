@@ -50,7 +50,6 @@ import vcnc.persist.Persist;
 import vcnc.tpile.MachineState;
 import vcnc.tpile.Translator;
 import vcnc.tpile.lex.Lexer;
-import vcnc.workoffsets.WorkOffsetDialog;
 
 
 public class MainWindow extends JFrame 
@@ -173,6 +172,9 @@ public class MainWindow extends JFrame
   
   private void doTestLexer() {
   	
+    // BUG: Should reset the MachineState to whatever is from the .ger
+    // preferences directory.
+    
   	// Run the lexer, and display the tokens in a new tab.
     // BUG: This shouldn't appear in production -- or probably not. Very few
     // users will care about this. OTOH, it might help them to understand
@@ -357,7 +359,10 @@ public class MainWindow extends JFrame
   
   
   private void doSimplify(int layer) throws OutOfMemoryError {
-  	
+
+    // BUG: Should reset the MachineState to whatever is from the .ger
+    // preferences directory.
+    
   	// Run some number of layers of the transpiler. The given layer is where 
     // to stop the translation. layer == -1 means to take the output of the 
     // Parser, layer == -2 means to run the wizard converter, layer == 0 means 
@@ -917,10 +922,12 @@ public class MainWindow extends JFrame
     
     File theDir = chooser.getSelectedFile();
     
-//    System.out.println("You chose to open this path: " +
-//            theDir.getAbsolutePath());
+    System.out.println("You chose to open this path: " +
+            theDir.getAbsolutePath());
     
-    Persist.gerDir = theDir.getAbsolutePath();
+    Persist.setGerLocation(theDir.getAbsolutePath());
+    
+    //Persist.gerDir = theDir.getAbsolutePath();
   }
   
   private void doToggleLineNumbers() {
@@ -1049,6 +1056,7 @@ public class MainWindow extends JFrame
 	  		
   		
   	} catch (OutOfMemoryError err) {
+  	  // BUG: Is this still relevant? 
   		JOptionPane.showMessageDialog(this,"Out of memory.\n"
   				+"Close some windows and try again.\n"
   				+"If that doesn't work, then restart the program.");

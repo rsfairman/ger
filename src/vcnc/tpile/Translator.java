@@ -19,7 +19,7 @@ public class Translator {
 	private int depth = -2;
 	
 	private Parser  P = null;
-	private LayerPre pre = null;
+	private Layer0B pre = null;
 	private Layer00 L00 = null;
 	private Layer01 L01 = null;
 	private Layer02 L02 = null;
@@ -56,7 +56,7 @@ public class Translator {
 			{
 				case -1	: P = new Parser(buf);
 									break;
-				case -2 : pre = new LayerPre(buf);
+				case -2 : pre = new Layer0B(buf);
 				          break;
 				case 0	: L00 = new Layer00(buf);
 									break;

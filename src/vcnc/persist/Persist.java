@@ -18,7 +18,10 @@ The data that persists is:
   be assumed for the ultimate output.
 * Work offsets table. This is just a table of (X,Y,Z) values to be used
   with G55,...,G59.
+* Tool turret. Specifying the cutters is inherently complicated once you
+  allow for arbitrary tool profiles.
   
+
 
 
 
@@ -57,7 +60,14 @@ public class Main {
 
 
 import java.io.File;
+
+import java.nio.file.Path;
+
 import java.util.prefs.Preferences;
+
+import java.net.URL;
+import java.net.MalformedURLException;
+import java.net.URLClassLoader;
 
 import javax.swing.JOptionPane;
 
@@ -67,9 +77,12 @@ import vcnc.util.FileIOUtil;
 
 public class Persist {
   
-  // The location of the .ger directory (which many be renamed). This is 
-  // where anything persistent is saved.
-  public static String gerDir = null;
+  // The key used in Preferences.
+  private static final String theKey = "gerPersist";
+  
+  // The location of the .ger directory (which many be renamed, and isn't 
+  // required to be called 'ger'). This is where anything persistent is saved.
+  private static String gerDir = null;
   
   // The default location for the .ger directory.
   //
@@ -77,14 +90,15 @@ public class Persist {
   // not what is desired. user.home is the home directory, which I do not
   // particularly like since it's just one more messy thing sitting in
   // that directory.
-  // Alternative suggested by John D. May (hope?) point to where the
+  // Alternative suggested by John D... May (hope?) point to where the
   // .jar sits.
   // System.out.println(new File(getClass().getProtectionDomain().getCodeSource().getLocation().toURI()).getPath());
   private static String defaultDir = System.getProperty("user.dir") 
-      + File.pathSeparator + ".ger";
+      + File.separator + ".ger";
   
   // The various items of persistent data are in different files with
   // these names.
+  // BUG: Maybe not the best file name.
   private static String inchName = "inch.txt";
   
   // You'd think that it would work to declare 
@@ -93,7 +107,12 @@ public class Persist {
   // referenced, but that's not what happens. This is needed.
   static {
     gerDir = loadGerDirLoc();
+    
+    ensureExistence();
+    
+    reload();
   }
+  
   
   private static String loadGerDirLoc() {
     
@@ -101,7 +120,39 @@ public class Persist {
     // Using this to store a significant amount of data is not a good idea,
     // so there's only a single key-value pair for the path (as a String).
     Preferences p = Preferences.userRoot();
-    return p.get("gerPersist",defaultDir);
+    return p.get(theKey,defaultDir);
+  }
+  
+  public static void setGerLocation(String path) {
+    
+    // It is assumed that path points to a valid location.
+    
+    // Normalize the path first, to eliminate things like '..'.
+    String norm = null;
+    
+    try {
+      norm = (new File(path)).getCanonicalPath();
+    } catch (Exception e) {
+      // This really shouldn't happen. The path is assumed to be valid.
+      System.err.println("Strange error in Persist.setGerLocation().");
+      return;
+    }
+    
+    Preferences p = Preferences.userRoot();
+    p.put(theKey,norm);
+  }
+  
+  public static String getGerLocation() {
+    return gerDir;
+  }
+  
+  private static void ensureExistence() {
+    
+    // Ensure that the .ger directory pointed to by gerDir exists on
+    // the file system.
+    File f = new File(gerDir);
+    if (f.exists() == false)
+      f.mkdirs();
   }
   
   public static boolean usingDefault() {
@@ -142,7 +193,7 @@ public class Persist {
     
   }
   
-  public static void loadSettings() {
+  private static void loadSettings() {
     
     // Load the various settings to the MachineState. This needs to be called
     // before running any G-code through the transpiler. Call this when the
@@ -150,6 +201,27 @@ public class Persist {
     loadInch();
   }
   
+  public static void reload() {
+    
+    // Won't work as of Java 9.
+//    try {
+//      // Ensure that the current .ger file is in the classpath.
+//      URLClassLoader urlClassLoader = 
+//          (URLClassLoader) ClassLoader.getSystemClassLoader();
+//      DynamicURLClassLoader dynaLoader = 
+//          new DynamicURLClassLoader(urlClassLoader);
+//      dynaLoader.addURL(new URL(gerDir));
+//    } catch (MalformedURLException e) {
+//      
+//      // BUG: This shouldn't happen.
+//      System.err.println("Problem with class loader");
+//      
+//    }
+    
+    loadSettings();
+    
+    System.out.println("current .ger directory: " +gerDir);
+  }
   
   
 }

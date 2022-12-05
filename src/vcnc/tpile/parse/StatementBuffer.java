@@ -4,7 +4,10 @@ package vcnc.tpile.parse;
 
 public class StatementBuffer {
 
-	// The number of statements in each buffer. 
+	// The number of statements in each buffer.
+  // BUG: I'm not so sure this should be static (or public). It may be
+  // better to go with a different data structure -- more dynamic.
+  // Also, this may need to have three buckets (not two) due to cutter comp.
 	public static int BufferSize = 20;
 	
 	public Statement[] first = null;

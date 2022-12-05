@@ -5,7 +5,8 @@ package vcnc;
 To take user input for all the settings for the machine: inch/mm, tool table,
 work offsets, etc.
 
-BUG: Not only is this functionally not done, it is ugly.
+BUG: Not only is this functionally not done, it is visibly ugly. 
+And it should go in a ui pacakge?
 
 */
 

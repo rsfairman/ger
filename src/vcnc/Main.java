@@ -1,7 +1,10 @@
 package vcnc;
 
 //NEXT:
-//  
+//
+// Get the wizard stuff not to use hard-coded paths specific to my machine
+// This relates to persistence too.
+// 
 //* Start with the lexer and work up to the last layer. As you reach things
 //  that need some kind of UI thing (like the tool table), write the
 //  necessary Swing.
@@ -16,8 +19,7 @@ package vcnc;
 // 
 // Look at the "pre" layer for wizards. Rename the layers?
 // 
-//* work offsets table and persistence framework. Easiest is probably some 
-//  kind of hidden .ger file or directory for settings.
+//* work offsets table
 
 
 
@@ -25,8 +27,9 @@ package vcnc;
 12345678901234567890123456789012345678901234567890123456789012345678901234567890
 
 Compiling:
+----------
 
-Obviously, Eclipse is the easy way, with no additional tools needed.
+Eclipse is the easy way, with no additional tools needed.
 
 If the source files are organized in packages (in the usual way Eclipse does 
 it), then one can cd to the primary directory -- vcnc in my case, where there's
@@ -35,11 +38,29 @@ packages, with vcnc as the top-level package name. Then say
 
 javac -cp src -d bin src/vcnc/Main.java
  
-and it creates all the .class files, exactly as Eclipse would do.
+and it creates all the .class files, exactly as Eclipse would do, sending
+them to a separate bin directory.
+
+How to Jarify:
+--------------
+
+Again, Eclipse makes this easy. Just "Export" it as a "Runnable JAR File."
+
+Or, you can do it more directly by cd-ing to the bin directory, where all the
+.class files are (as above). The manifest file should be there too, consisting 
+of one line: 
+Main-Class: vcnc.Main
+
+Now type
+
+jar cvmf manifest ger.jar vcnc
+
+and you get the jar file in the bin directory.
 
 
 
 Version History
+---------------
 
 v01
 
@@ -171,7 +192,25 @@ set as a result of a single dialog. In particular, it should be clear to the
 user that the inch/mm choice affects the tool and work offsets tables.
 
 So...reorganized the WorkOffsets stuff, mostly with regard to the UI, and
-added the vcnc.tooltable package, most of which is a mess.
+added the vcnc.tooltable package, most of which is a mess. I just wanted a
+placeholder for the Swing aspects of the UI.
+
+Created Layer0A, with the intent of breaking up the wizard/machine directive
+stuff into two layers. Layer0A is done(ish); it handles machine directives.
+Worked on LayerPre (which has been renamed to Layer0B) to handle actual
+wizards. This requires loading a class that many not have been known at
+compile-time, and it may require compiling a .java file to the .class file.
+
+v08
+
+Clean up some of the mess in Layer0B now that the essence is there. A bunch
+of tests related to run-time compilation were removed.
+
+Create a jar and a CLI. Compiling wizards is most easily done (for me, as the
+developer, and for the user) with a CLI. While I'm at it, letting the user
+translate G-code via the CLI is an easy thing, as is running the unit tests.
+See Main.isGui() below.
+
 
 
 
@@ -231,10 +270,6 @@ TODO:
 * Problem when you close tabs (or entire windows). They somehow seem to
   remain on "the list."
 
-* I need to insert the G/M/whatever wizard interpreter after the lexer
-  and before the parser. Some odd G-code might expect certain arguments
-  and the parser needs to know what those are.
-
 * What about text size and fonts in general?
 
 * Track file dirty
@@ -248,15 +283,16 @@ TODO:
 
 */
 
+
 // BUG: Should I name all these packages ger.whatever instead of vcnc.whatever?
 // Ger *is* supposed to be the name of the program.
 
+import java.io.File;
+import java.nio.file.Path;
 
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-
-import java.util.prefs.Preferences;
 
 import vcnc.persist.Persist;
 import vcnc.unittest.UnitTests;
@@ -264,7 +300,13 @@ import vcnc.unittest.UnitTests;
 
 public class Main {
   
+  // Whether this is being run as a CLI (or GUI).
+  private static boolean asCLI = false;
   
+  
+  public static boolean runningAsCLI() {
+    return asCLI;
+  }
 
   private static void createAndShowGUI() {
   	
@@ -340,22 +382,106 @@ public class Main {
     System.out.println("Unit tests complete.");
     
   }
+  
+  private static boolean handleCLI(String[] args) {
+
+    // Parse any arguments and act accordingly. If there are no arguments or
+    // the only argument is 'gui', then return true immediately. Otherwise,
+    // parse the arguments, act accordingly and return false.
+    //
+    // The permitted arguments are
+    // * 'gui' (or no arguments) to launch as a GUI program.
+    // * 'test' to run a suite of tests.
+    // * 'change' to switch to a different .ger directory. Provide the
+    //   path to the desired .ger directory.
+    // * 'translate' to run a single input g-code file and send the
+    //   output to stdout.
+    // * 'compile' takes a wizard name. The associated .java file must be in 
+    //   the .ger directory. This is slightly redundant since 'translate' 
+    //   will attempt to compile too, provided there's an uncomplied wizard 
+    //   referenced by the G-code.
+    
+    if ((args == null) || (args.length == 0))
+      return true;
+    
+    if ((args.length == 1) && (args[0].equals("gui")))
+      return true;
+    
+    // Got here, so we're running strictly with CLI.
+    Main.asCLI = true;
+    
+    
+    if ((args.length == 1) && (args[0].equals("test")))
+      {
+        testMain();
+        return false;
+      }
+    
+    if ((args.length == 2) && (args[0].equals("change")))
+      {
+        File f = new File(args[1]);
+        
+        if (f.exists() == false)
+          System.err.println("No such directory.");
+        else if (f.isDirectory() == false)
+          System.err.println("That is not a directory.");
+        else
+          {
+            System.out.println("Changed to " +f.getAbsolutePath());
+            Persist.setGerLocation(f.getAbsolutePath());
+          }
+        
+        return false;
+      }
+    
+    if ((args.length == 2) && (args[0].equals("compile")))
+      {
+        WizCompile.compile(args[1]);
+        return false;
+      }
+    
+    if ((args.length == 2) && (args[0].equals("translate")))
+      {
+        File f = new File(args[1]);
+        if (f.exists() == false)
+          {
+            System.err.println("No such file.");
+            return false;
+          }
+        
+        // BUG: Implement this, but it doesn't make sense until all the layers
+        // have been debugged. Also, running only a few layers through the CLI
+        // doesn't make sense either (as tempting as that is to implement).
+        System.out.println("not implemented");
+        
+        return false;
+      }
+    
+    System.err.println("Unexpected arguments...");
+    return false;
+  }
 
   public static void main(String[] args) {
     
     // Load any machine settings from the .ger directory to MachineState.
-    Persist.loadSettings();
+    Persist.reload();
     
-    // There are two ways to run the program: normally, as a gui; or to
-    // do unit tests. Comment out one or the other.
-    // 
-    // It wouldn't be hard to take a command-line argument to do these
-    // tests, but it's more trouble than it's worth.
+    if (handleCLI(args) == true)
+      guiMain();
     
-    // The usual way to run the program:
-    guiMain();
+    // else, fall off; it was dealt with by handleCLI().
     
-    // Or, run a series of unit tests:
+    
+    
+    // For testing...
+    
+    
+//    WizCompile.compile("SimpleWiz2");
+    
+
+    System.exit(0);
+//    guiMain();
+    
 //    testMain();
 
   }

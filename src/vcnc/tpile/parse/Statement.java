@@ -118,6 +118,8 @@ public class Statement {
 	
 	public Statement() {
 	  // Do-nothing.
+	  // BUG: Don't like this do-nothing. A Statement should require a type,
+	  // so that only the other constructor makes sense.
 	}
 	
 	public Statement(short type) {

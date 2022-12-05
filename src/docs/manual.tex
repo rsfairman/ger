@@ -557,6 +557,37 @@ the billet.
 
 
 
+\section{Wizards}
+
+THIS IS MORE OF A PLACEHOLDER...
+
+The easiest way to develop a new wizard is through the
+command-line. Say (something like)
+\begin{verbatim}
+ger -compile mywizard.java
+\end{verbatim}
+The only reason to do this, and not use {\tt javac} is to avoid
+understanding the Java development framework any more than absolutely
+necessary.
+
+You might also say
+\begin{verbatim}
+ger -translate gcode.txt
+\end{verbatim}
+where {\tt gcode.txt} uses {\tt mywizard}. The issue here is that
+setting things up to allow \ger\ to permit interactive Java
+development is hard for at least two reasons. First, is simply the
+UI -- \ger\ can't be an IDE. Second, is that it is hard to reload a
+given {\tt .class} files. As the user changes his {\tt .java} file,
+the {\tt .class} file will change, and it's hard to reload changes to
+a class. The JVM doesn't understand that the current {\tt MyWizard}
+class is different than the {\tt MyWizard} it loaded earlier. It's
+possible to do this (IDEs do it), but a lot of messing around.
+
+
+\vskip 2cm
+
+
 
 
 
