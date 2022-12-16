@@ -2,40 +2,53 @@ package vcnc.tpile.parse;
 
 /*
 
-Converts G-code to a series of Statement objects. Each Statement is a self-
+Converts G-code to a series of statement objects. Each statement is a self-
 contained G-code "command," including the possibility of wizards commands.
 
 This creates a Lexer and consumes Token objects from it.
  
 */
 
+import java.util.ArrayList;
 
-import vcnc.tpile.CodeBuffer;
+import vcnc.tpile.StxP;
 import vcnc.tpile.lex.Lexer;
 import vcnc.tpile.lex.Token;
 
 
 public class Parser {
-
-  // The underlying Lexer object.
-  private Lexer theLexer = null;
-
-  // These statements are to be fed upward to the next layer, and they're
-  // buffered here.
-  private StatementBuffer statements = null;
+  
+  // The tokens to be parsed to statements, from the Lexer.
+  private ArrayList<Token> theTokens = null;
+  
+  // Where we are in the parsing process -- the mark relative to theTokens.
+  private int tokenIndex = 0;
   
   
-  public Parser(CodeBuffer theCode) {
+  private Parser(ArrayList<Token> toks) {
     
-    // Get the lexer ready.
-    this.theLexer = new Lexer(theCode);
-    
-    // Fill the statement buffer to start off.
-    this.statements = new StatementBuffer();
-    statements.first = fillOneBuffer();
-    statements.second = fillOneBuffer();
+    this.theTokens = toks;
+    this.tokenIndex = 0;
   }
 
+  private Token getToken() {
+    
+    if (tokenIndex >= theTokens.size())
+      return new Token(Token.EOF,0);
+    
+    Token answer = theTokens.get(tokenIndex);
+    ++tokenIndex;
+    return answer;
+  }
+  
+  private Token peekToken() {
+    
+    if (tokenIndex >= theTokens.size())
+      return new Token(Token.EOF,0);
+    
+    return theTokens.get(tokenIndex);
+  }
+  
   private String formError(int lineNumber,String msg) {
     return "Error on line " +lineNumber+ ": " + msg;
   }
@@ -44,11 +57,11 @@ public class Parser {
     
     // Read any "junk" tokens. The following are ignored: extra EOL's,
     // and line numbers (N).
-    Token peek = theLexer.peekToken();
+    Token peek = peekToken();
     while ((peek.letter == Token.EOL) || (peek.letter == 'N'))
       {
-        Token trash = theLexer.getToken();
-        peek = theLexer.peekToken();
+        Token trash = getToken();
+        peek = peekToken();
       }
   }
 
@@ -65,18 +78,18 @@ public class Parser {
     // AND JUST ACCEPT THAT THEY ARE VALID TO WHATEVER MACHINE IS THE FINAL
     // CONSUMER.
     // SO BE CAREFUL WHERE THIS IS CALLED
-    Token peek = theLexer.peekToken();
+    Token peek = peekToken();
     while (peek.letter != Token.EOL)
       {
-        Token trash = theLexer.getToken();
-        peek = theLexer.peekToken();
+        Token trash = getToken();
+        peek = peekToken();
       }
   }
   
-  private void parseWizard(Statement answer,Token startToken) {
+  private void parseWizard(StxP answer,Token startToken) {
     
     // Have just read a wizard command. Parse to the end of the line.
-    answer.type = Statement.WIZARD;
+    answer.type = StxP.WIZARD;
     
     DataWizard wiz = new DataWizard();
     answer.data = wiz;
@@ -87,7 +100,7 @@ public class Parser {
     // name to the EOL. This may or may not be the correct set of arguments,
     // but that will be determined later.
     
-    Token t = theLexer.getToken();
+    Token t = getToken();
     while (t.letter != Token.EOL)
       {
         if (t.letter == Token.STRING)
@@ -96,32 +109,32 @@ public class Parser {
           wiz.args.add(t.d);
         else
           {
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,
                 "Unexpected argument to wizard");
             return;
           }
         
-        t = theLexer.getToken();
+        t = getToken();
       }
     
     return;
   }
   
-  private void parseGCode(Statement answer,Token startToken) {
+  private void parseGCode(StxP answer,Token startToken) {
     
     // Have already read the G-something token. Read anything else needed to 
     // form a complete statement.
     
     if (startToken.i == 0)
-      answer.type = Statement.G00;
+      answer.type = StxP.G00;
     else if (startToken.i == 1)
-      answer.type = Statement.G01;
+      answer.type = StxP.G01;
     else if ((startToken.i == 2) || (startToken.i == 3))
       {
         // Circular interpolation. Both cases are similar.
-        if (startToken.i == 2) answer.type = Statement.G02;
-        if (startToken.i == 3) answer.type = Statement.G03;
+        if (startToken.i == 2) answer.type = StxP.G02;
+        if (startToken.i == 3) answer.type = StxP.G03;
         
         // What follows must be some combination of the following:
         // X## Y## Z## I## J## K## R## F##
@@ -131,120 +144,120 @@ public class Parser {
         // So, the next token must be X, I or R.
         DataCircular data = new DataCircular();
         answer.data = data;
-        Token next = theLexer.peekToken();
+        Token next = peekToken();
         
         // Get the X,Y (if any). If they are not defined, then this is a
         // complete circle (and there must be an I and/or J).
         if (next.letter == 'X')
           {
             // Read X and Y.
-            next = theLexer.getToken();
+            next = getToken();
             data.xDefined = true;
             data.X = next.d;
-            next = theLexer.peekToken();
+            next = peekToken();
             
             // There may or may not be a Y and Z.
             if (next.letter == 'Y')
               {
-                next = theLexer.getToken();
+                next = getToken();
                 data.yDefined = true;
                 data.Y = next.d;
-                next = theLexer.peekToken();
+                next = peekToken();
               }
             if (next.letter == 'Z')
               {
-                next = theLexer.getToken();
+                next = getToken();
                 data.zDefined = true;
                 data.Z = next.d;
-                next = theLexer.peekToken();
+                next = peekToken();
               }
           }
         else if (next.letter == 'Y')
           {
             // There was no X, but there is a Y and there might be a Z.
-            next = theLexer.getToken();
+            next = getToken();
             data.yDefined = true;
             data.Y = next.d;
-            next = theLexer.peekToken();
+            next = peekToken();
 
             if (next.letter == 'Z')
               {
-                next = theLexer.getToken();
+                next = getToken();
                 data.zDefined = true;
                 data.Z = next.d;
-                next = theLexer.peekToken();
+                next = peekToken();
               }
           }
         else if (next.letter == 'Z')
           {
             // There was no X or Y, but there is a Z.
-            next = theLexer.getToken();
+            next = getToken();
             data.zDefined = true;
             data.Z = next.d;
-            next = theLexer.peekToken();
+            next = peekToken();
           }
         
         // Have read X,Y,Z, if any. Next will be I/J/K or R.
         if (next.letter == 'I')
           {
             // Read I,J,K.
-            next = theLexer.getToken();
+            next = getToken();
             data.iDefined = true;
             data.I = next.d;
-            next = theLexer.peekToken();
+            next = peekToken();
             
             // See if there is a J,K.
             if (next.letter == 'J')
               {
-                next = theLexer.getToken();
+                next = getToken();
                 data.jDefined = true;
                 data.J = next.d;
-                next = theLexer.peekToken();
+                next = peekToken();
               }
             if (next.letter == 'K')
               {
-                next = theLexer.getToken();
+                next = getToken();
                 data.kDefined = true;
                 data.K = next.d;
-                next = theLexer.peekToken();
+                next = peekToken();
               }
           }
         else if (next.letter == 'J')
           {
             // No I, but there is a J and maybe a K.
-            next = theLexer.getToken();
+            next = getToken();
             data.jDefined = true;
             data.J = next.d;
-            next = theLexer.peekToken();
+            next = peekToken();
             
             if (next.letter == 'K')
               {
-                next = theLexer.getToken();
+                next = getToken();
                 data.kDefined = true;
                 data.K = next.d;
-                next = theLexer.peekToken();
+                next = peekToken();
               }
           }
         else if (next.letter == 'K')
           {
             // No I or J, but we have K.
-            next = theLexer.getToken();
+            next = getToken();
             data.kDefined = true;
             data.K = next.d;
-            next = theLexer.peekToken();
+            next = peekToken();
           }
         else if (next.letter == 'R')
           {
             // No I,J,K; R instead.
-            next = theLexer.getToken();
+            next = getToken();
             data.rDefined = true;
             data.R = next.d;
-            next = theLexer.peekToken();
+            next = peekToken();
           }
         else
           {
             // Something's not right. G02/G03 is missing both I,J,K and R.
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,
                 "G02/03 improperly specified");
             readToEOLOrSemi();
@@ -252,10 +265,10 @@ public class Parser {
           }
         
         // The entire thing might be followed by a feed rate.
-        next = theLexer.peekToken();
+        next = peekToken();
         if (next.letter == 'F')
           {
-            next = theLexer.getToken();
+            next = getToken();
             data.F = next.d;
           }
         
@@ -266,7 +279,7 @@ public class Parser {
         if ((data.xDefined == false) && (data.yDefined == false) 
             && (data.zDefined == false) && (data.rDefined == true))
             {
-              answer.type = Statement.ERROR;
+              answer.type = StxP.ERROR;
               answer.error = formError(startToken.lineNumber,
                   "radius given, but no end-point");
               readToEOLOrSemi();
@@ -274,28 +287,28 @@ public class Parser {
       } // end circular interpolation case.
     else if (startToken.i == 15)
       // Polar coordinates off.
-      answer.type = Statement.G15;
+      answer.type = StxP.G15;
     else if (startToken.i == 16)
       // Polar coordinates on.
-      answer.type = Statement.G16;
+      answer.type = StxP.G16;
     else if (startToken.i == 17)
       // Choose coordinate axes.
-      answer.type = Statement.G17;
+      answer.type = StxP.G17;
     else if (startToken.i == 18)
       // Choose coordinate axes.
-      answer.type = Statement.G18;
+      answer.type = StxP.G18;
     else if (startToken.i == 19)
       // Choose coordinate axes.
-      answer.type = Statement.G19;
+      answer.type = StxP.G19;
     else if (startToken.i == 20)
-      answer.type = Statement.G20;
+      answer.type = StxP.G20;
     else if (startToken.i == 21)
-      answer.type = Statement.G21;
+      answer.type = StxP.G21;
     else if (startToken.i == 28)
-      answer.type = Statement.G28;
+      answer.type = StxP.G28;
     else if (startToken.i == 40)
       // Cancel cutter comp.
-      answer.type = Statement.G40;
+      answer.type = StxP.G40;
     else if ((startToken.i == 41) || (startToken.i == 42)) 
       {
         // Apply cutter comp. After the G41 or G42, this takes the form
@@ -308,18 +321,18 @@ public class Parser {
         // This is what I will do. Whatever follows the G41/42 D/H##
         // must be read as a separate statement.
         DataRegister data = new DataRegister();
-        if (startToken.i == 41) answer.type = Statement.G41;
-        if (startToken.i == 42) answer.type = Statement.G42;
+        if (startToken.i == 41) answer.type = StxP.G41;
+        if (startToken.i == 42) answer.type = StxP.G42;
         
         // Next token should be D or H.
-        Token next = theLexer.getToken();
+        Token next = getToken();
         if (next.letter == 'D')
           data.D = true;
         else if (next.letter == 'H')
           data.D = false;
         else
           {
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,
                 "G41/42 not followed by H or D");
             readToEOLOrSemi();
@@ -333,24 +346,24 @@ public class Parser {
         // Apply TLO. Similar to cutter comp.
         // Takes the form
         // G43 [Zx.xx] Hn
-        if (startToken.i == 43) answer.type = Statement.G43;
-        if (startToken.i == 44) answer.type = Statement.G44;
+        if (startToken.i == 43) answer.type = StxP.G43;
+        if (startToken.i == 44) answer.type = StxP.G44;
         DataTLO data = new DataTLO();
         
         // See if there's an optional Z value.
-        Token next = theLexer.getToken();
+        Token next = getToken();
         if (next.letter == 'Z')
           {
             // Read the value.
             data.hasZ = true;
             data.zValue = next.d;
-            next = theLexer.getToken();
+            next = getToken();
           }
           
         // Now there must be an H value
         if (next.letter != 'H')
           {
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,
                 "G43/G44 not followed by H register");
             readToEOLOrSemi();
@@ -362,7 +375,7 @@ public class Parser {
       } // end TLO
     else if (startToken.i == 49)
       // Cancel TLO.  
-      answer.type = Statement.G49;
+      answer.type = StxP.G49;
     else if (startToken.i == 52)
       {
         // Temporary change in PRZ (or return to original). This must
@@ -370,7 +383,7 @@ public class Parser {
         // object for these coordinates, even though the F-value is unused.
         // It would usually (I guess) be an error not to have X and Y, but I
         // assume that if any of these is omitted, it must not be changed.
-        answer.type = Statement.G52;
+        answer.type = StxP.G52;
         
         boolean xDefined = false;
         boolean yDefined = false;
@@ -379,7 +392,7 @@ public class Parser {
         double yValue = 0.0;
         double zValue = 0.0;
         
-        Token nextToken = theLexer.getToken();
+        Token nextToken = getToken();
         if (startToken.letter == 'X')
           {
             xDefined = true;
@@ -404,18 +417,18 @@ public class Parser {
           }
         
         // Continue for up to two more letters.
-        Token peekToken = theLexer.peekToken();
+        Token peekToken = peekToken();
         while ((peekToken.letter == 'X') || (peekToken.letter == 'Y') || 
             (peekToken.letter == 'Z'))
           {
             // Go ahead and get it instead of just peeking.
-            peekToken = theLexer.getToken();
+            peekToken = getToken();
             if (peekToken.letter == 'X')
               {
                 if (xDefined == true)
                   {
                     // Error. Already read this value.
-                    answer.type = Statement.ERROR;
+                    answer.type = StxP.ERROR;
                     answer.error = formError(answer.lineNumber,"two x-values");
                     readToEOLOrSemi();
                     return;
@@ -428,7 +441,7 @@ public class Parser {
                 if (yDefined == true)
                   {
                     // Error. Already read this value.
-                    answer.type = Statement.ERROR;
+                    answer.type = StxP.ERROR;
                     answer.error = formError(answer.lineNumber,"two y-values");
                     readToEOLOrSemi();
                     return;
@@ -441,7 +454,7 @@ public class Parser {
                 if (zDefined == true)
                   {
                     // Error. Already read this value.
-                    answer.type = Statement.ERROR;
+                    answer.type = StxP.ERROR;
                     answer.error = formError(answer.lineNumber,"two z-values");
                     readToEOLOrSemi();
                     return;
@@ -451,7 +464,7 @@ public class Parser {
               }
             
             // Peek to the next one.
-            peekToken = theLexer.peekToken();
+            peekToken = peekToken();
           }
         
         // Statement has been read. Combine the data into a single object.
@@ -461,122 +474,122 @@ public class Parser {
     else if ((startToken.i >= 54) && (startToken.i <= 59))
       {
         // Work offsets.
-        if (startToken.i == 54) answer.type = Statement.G54;
-        if (startToken.i == 55) answer.type = Statement.G55;
-        if (startToken.i == 56) answer.type = Statement.G56;
-        if (startToken.i == 57) answer.type = Statement.G57;
-        if (startToken.i == 58) answer.type = Statement.G58;
-        if (startToken.i == 59) answer.type = Statement.G59;
+        if (startToken.i == 54) answer.type = StxP.G54;
+        if (startToken.i == 55) answer.type = StxP.G55;
+        if (startToken.i == 56) answer.type = StxP.G56;
+        if (startToken.i == 57) answer.type = StxP.G57;
+        if (startToken.i == 58) answer.type = StxP.G58;
+        if (startToken.i == 59) answer.type = StxP.G59;
       }
     else if (startToken.i == 90)
       // Absolute mode.
-      answer.type = Statement.G90;
+      answer.type = StxP.G90;
     else if (startToken.i == 91)
       // Incremental mode.
-      answer.type = Statement.G91;
+      answer.type = StxP.G91;
     else
       {
         // Catch any G-code that is not handled above and flag it as an error.
-        answer.type = Statement.ERROR;
+        answer.type = StxP.ERROR;
         answer.error = formError(answer.lineNumber,
             "unknown G-code: " +startToken.i);
         readToEOLOrSemi();
       }
   }
 
-  private void parseMCode(Statement answer,Token startToken) {
+  private void parseMCode(StxP answer,Token startToken) {
     
     // Have already read the M-something token. Read anything else needed to 
     // form a complete statement.
     if (startToken.i == 0)
       // Program Stop. Treated as a hard stop.
-      answer.type = Statement.M00;
+      answer.type = StxP.M00;
     else if (startToken.i == 1)
       // Program stop. I think this is an optional stop.
-      answer.type = Statement.M01;
+      answer.type = StxP.M01;
     else if (startToken.i == 2)
       // Program end.
-      answer.type = Statement.M02;
+      answer.type = StxP.M02;
     else if (startToken.i == 3)
       {
         // Spindle start, clockwise. Requires S-token for RPM.
-        Token rpm = theLexer.getToken();
+        Token rpm = getToken();
         if (rpm.letter != 'S')
           {
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,"bad spindle speed");
             readToEOLOrSemi();
             return;
           }
-        answer.type = Statement.M03;
+        answer.type = StxP.M03;
         answer.data = new DataInt(rpm.i);
       }
     else if (startToken.i == 4)
       {
         // Spindle start, CCW. Almost the same as above.
-        Token rpm = theLexer.getToken();
+        Token rpm = getToken();
         if (rpm.letter != 'S')
           {
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,"bad spindle speed");
             readToEOLOrSemi();
             return;
           }
-        answer.type = Statement.M04;
+        answer.type = StxP.M04;
         answer.data = new DataInt(rpm.i);
       }
     else if (startToken.i == 5)
         // Spindle off
-        answer.type = Statement.M05;
+        answer.type = StxP.M05;
     else if (startToken.i == 6)
       {
         // Tool change. This should be followed by a T-token.
-        Token tool = theLexer.getToken();
+        Token tool = getToken();
         if (tool.letter != 'T')
           {
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,
                 "bad tool change (M06 T?)");
             readToEOLOrSemi();
             return;
           }
-        answer.type = Statement.M06;
+        answer.type = StxP.M06;
         answer.data = new DataInt(tool.i);
       }
     else if ((startToken.i == 7) || (startToken.i == 8) || (startToken.i == 9))
       {
         // Coolant on/off. Pass it on even though it will be ignored.
-        if (startToken.i == 7) answer.type = Statement.M07;
-        if (startToken.i == 8) answer.type = Statement.M08;
-        if (startToken.i == 9) answer.type = Statement.M09;
+        if (startToken.i == 7) answer.type = StxP.M07;
+        if (startToken.i == 8) answer.type = StxP.M08;
+        if (startToken.i == 9) answer.type = StxP.M09;
       }
     else if (startToken.i == 30)
       // End of program.
-      answer.type = Statement.M30;
+      answer.type = StxP.M30;
     else if ((startToken.i == 40) || (startToken.i == 41))
       {
         // Spindle high/low.
-        if (startToken.i == 40) answer.type = Statement.M40;
-        if (startToken.i == 41) answer.type = Statement.M41;
+        if (startToken.i == 40) answer.type = StxP.M40;
+        if (startToken.i == 41) answer.type = StxP.M41;
       }
     else if (startToken.i == 47)
       // Repeat program
-      answer.type = Statement.M47;
+      answer.type = StxP.M47;
     else if (startToken.i == 48)
       // Enable overrides.
-      answer.type = Statement.M48;
+      answer.type = StxP.M48;
     else if (startToken.i == 49)
       // Disable overrides.
-      answer.type = Statement.M49;
+      answer.type = StxP.M49;
     else if (startToken.i == 98)
       {
         // Call subprogram. The format here should be M98 P[###] L[###], where 
         // P gives the program number to call, and L is the number of times to 
         // call it. The M98 *must* be followed by a P.
-        Token P = theLexer.getToken();
+        Token P = getToken();
         if (P.letter != 'P')
           {
-            answer.type = Statement.ERROR;
+            answer.type = StxP.ERROR;
             answer.error = formError(answer.lineNumber,
                 "bad subroutine call (M98 P?)");
             readToEOLOrSemi();
@@ -587,75 +600,69 @@ public class Parser {
         answer.data = call;
         
         // Note: I used a double because I think that P can mean other things 
-        // too.
+        // too on some machines.
         call.programNumber = (int) P.d;
-        call.returnIndex = P.endCount;
+        call.returnChar = P.endCount;
         
         // This might be followed by an L-value.
-        Token L = theLexer.peekToken();
+        Token L = peekToken();
         if (L.letter == 'L')
           {
-            L = theLexer.getToken();
+            L = getToken();
             call.invocations = L.i;
-            call.returnIndex = L.endCount;
+            call.returnChar = L.endCount;
           }
         else
           {
             // If there is no L-value, then I assume a single invocation.
             // The returnIndex was already set to be just after the P-value.
             call.invocations = 1;
-            call.returnIndex = P.endCount;
+            call.returnChar = P.endCount;
           }
         
-        answer.type = Statement.M98;
+        answer.type = StxP.M98;
       } // end M98 (call subroutine)
     else if (startToken.i == 99)
       // Return from subprogram
-      answer.type = Statement.M99;
+      answer.type = StxP.M99;
     else
       {
-        answer.type = Statement.ERROR;
+        answer.type = StxP.ERROR;
         answer.error = formError(answer.lineNumber,
             "unknown M-code: M" +startToken.i);
         readToEOLOrSemi();
       }
   }
 
-  private void parseNCode(Statement answer,Token startToken) {
+  private void parseNCode(StxP answer,Token startToken) {
     
     // Line number.
     // BUG: THis shouldn't be possible. They're tossed by readWhite().
-    answer.type = Statement.LINE;
+    answer.type = StxP.LINE;
     answer.data = new DataInt(startToken.i);
   }
   
-  private void parseOCode(Statement answer,Token startToken) {
+  private void parseOCode(StxP answer,Token startToken) {
     
     // Program number. When a sub-program is called, we will need to know
     // the character and line to which the program will be jumping to
     // execute that sub-program. This is the position immediately *after*
     // the O### statement -- the position of the start of the next statement
     // after the O### statement.
-    answer.type = Statement.PROG;
+    answer.type = StxP.PROG;
     
     DataSubProg data = new DataSubProg();
     data.progNumber = startToken.i;
     answer.data = data;
-    
-    // Peek ahead to the token that follows this one. That's where the
-    // body of the sub-program starts.
-    Token nextToken = theLexer.peekToken();
-    data.characterNumber = nextToken.characterCount;
-    data.lineNumber = nextToken.lineNumber;
   }
   
-  private void parseXYZ(Statement answer,Token startToken) {
+  private void parseXYZ(StxP answer,Token startToken) {
     
     // Have just read an X, Y or Z token (in startToken). Read to the end of the
     // move. The form of a general statement of this type is
     // [X#][Y#][Z#][F#]. The statement is considered complete as soon as either 
     // an F or anything other than X,Y,Z,F is read.
-    answer.type = Statement.MOVE;
+    answer.type = StxP.MOVE;
     boolean xDefined = false;
     boolean yDefined = false;
     boolean zDefined = false;
@@ -683,18 +690,18 @@ public class Parser {
       }
 
     // Continue for up to two more letters.
-    Token peekToken = theLexer.peekToken();
+    Token peekToken = peekToken();
     while ((peekToken.letter == 'X') || (peekToken.letter == 'Y') || 
         (peekToken.letter == 'Z'))
       {
         // Go ahead and get it instead of just peeking.
-        peekToken = theLexer.getToken();
+        peekToken = getToken();
         if (peekToken.letter == 'X')
           {
             if (xDefined == true)
               {
                 // Error. Already read this value.
-                answer.type = Statement.ERROR;
+                answer.type = StxP.ERROR;
                 answer.error = formError(answer.lineNumber,"two x-values");
                 readToEOLOrSemi();
                 return;
@@ -707,7 +714,7 @@ public class Parser {
             if (yDefined == true)
               {
                 // Error. Already read this value.
-                answer.type = Statement.ERROR;
+                answer.type = StxP.ERROR;
                 answer.error = formError(answer.lineNumber,"two y-values");
                 readToEOLOrSemi();
                 return;
@@ -720,7 +727,7 @@ public class Parser {
             if (zDefined == true)
               {
                 // Error. Already read this value.
-                answer.type = Statement.ERROR;
+                answer.type = StxP.ERROR;
                 answer.error = formError(answer.lineNumber,"two z-values");
                 readToEOLOrSemi();
                 return;
@@ -730,14 +737,14 @@ public class Parser {
           }
         
         // Peek to the next one.
-        peekToken = theLexer.peekToken();
+        peekToken = peekToken();
       }
     
     // Have read any X,Y,Z values. See if there is an F-value.
     if (peekToken.letter == 'F')
       {
         // Yes, move past the F-token.
-        peekToken = theLexer.getToken();
+        peekToken = getToken();
         fDefined = true;
         fValue = peekToken.d;
       }
@@ -747,26 +754,26 @@ public class Parser {
                                 xValue,yValue,zValue,fValue);
   }
   
-  private Statement readStatement() {
+  private StxP readStatement() {
     
     // Read and return one complete Statement.
-    Statement answer = new Statement();
+    StxP answer = new StxP(StxP.UNKNOWN);
     
     // This also reads past any ';' or 'N' tokens.
     readWhite();
     
     // The next token should be something that opens a statement. Parse these
-    // the incoming Tokens to a Statement.
-    Token curToken = theLexer.getToken();
+    // incoming Tokens to a statement.
+    Token curToken = getToken();
     answer.lineNumber = curToken.lineNumber;
     answer.charNumber = curToken.characterCount;
     
     switch (curToken.letter)
       {
-        case Token.ERROR  : answer.type = Statement.ERROR;
+        case Token.ERROR  : answer.type = StxP.ERROR;
                             answer.error = curToken.error;
                             return answer;
-        case Token.EOF    : answer.type = Statement.EOF;
+        case Token.EOF    : answer.type = StxP.EOF;
                             return answer;
         
         // These are the cases where (we hope) things are going normally.
@@ -774,7 +781,8 @@ public class Parser {
                     return answer;
         case 'M'  : parseMCode(answer,curToken);
                     return answer;
-        // BUG: THis shouldn't be possible. 'N' is tossed by readWhite().
+                    
+        // BUG: This shouldn't be possible. 'N' is tossed by readWhite().
         case 'N'  : parseNCode(answer,curToken);
                     return answer;
         case 'O'  : parseOCode(answer,curToken);
@@ -791,7 +799,7 @@ public class Parser {
         // Any other letter that appears here is an error. These tokens
         // should not be "bare."
         default :
-          answer.type = Statement.ERROR;
+          answer.type = StxP.ERROR;
           answer.error = formError(answer.lineNumber,
               "unexpected command -- " +curToken.letter);
           readToEOLOrSemi();
@@ -799,429 +807,45 @@ public class Parser {
       }
   }
   
-  private Statement[] fillOneBuffer() {
-    
-    // Fill an array with StatementBuffer.BufferSize tokens, by eating tokens
-    // from the lexer.
-    Statement[] answer = new Statement[StatementBuffer.BufferSize];
-    
-    for (int i = 0; i < answer.length; i++)
-      answer[i] = readStatement();
-    
-    return answer;
-  }
-
-  public Statement getStatement() {
-    
-    // Return a Statement from the buffer. If this is the last Statement in 
-    // statements.first, then refill the buffer.
-    
-    // BUG: (Maybe) In the C++ version, I was using three buffers and
-    // I'm not sure why. I was also a bit more clever about peeking, taking
-    // into account the possibility that I need to refresh a buffer there too.
-    
-    Statement answer = statements.first[statements.index];
-    ++statements.index;
-    
-    if (statements.index >= StatementBuffer.BufferSize)
-      {
-        // Refresh.
-        statements.first = statements.second;
-        statements.second = fillOneBuffer();
-        statements.index = 0;
-      }
-    
-    return answer;
-  }
-  
-  public Statement peekStatement() {
-    
-    return statements.first[statements.index];
-  }
-  
-
-  public void reset() {
-    
-    // Restart from the very beginning of the code.
-    theLexer.reset();
-    statements.first = fillOneBuffer();
-    statements.second = fillOneBuffer();
-    statements.index = 0;
-  }
-
-  public void moveTo(int n,int lineNumber) {
-    
-    // Restart the parsing process at the n-th character, which is assumed
-    // to be on the given line number.
-    theLexer.moveTo(n,lineNumber);
-    
-    // Restart the buffers.
-    statements.first = fillOneBuffer();
-    statements.second = fillOneBuffer();
-    statements.index = 0;
-  }
-  
-}
-
-
-/*
-
-BUG: this C++ (mostly) code is for reference, partly because I'm still not
-sure why I used three buffers in C++. Was there some issue that it solved?
-
-Found a comment in the C++ code (v08)...
-
-//     I changed the way Statement objects are buffered by Parser. Before, I
-//     was using a buffer consisting of two buckets, and I would switch from
-//     one bucket to the other, refilling the one we're done with, when we
-//     reach the end of one of the two buckets. That was fine, except that
-//     when dealing with CC, we need to be able to keep in memory a statement 
-//     from the position one statement *previous* to the current statement.
-//     What happens when there are only two buffers is that, when one of the
-//     two buffers is refilled, we end up overwriting the preious statement.
-//     So, I went to buffers with three buckets. That way we are safe, and
-//     statements won't be overwritten, unless they are more than the bucket
-//     size from the current position in the stream. In essense, Layer05
-//     needs some look-ahead, as many compilers and interpreters do, but it
-//     also needs to be able to look back (or at least keep past statements
-//     in memory temporarily).
  
-
-
-//void Parser::parseIJK(Statement *answer,const Token *startToken)
-//{
-//  // Very similar to parseXYZ(). Have just read an I, J or K token (in startToken).
-//  // Read to the end of the move. The form of a general statment of this type is
-//  // [I#][J#][K#][F#]. The statement is considered complete as soon as either an
-//  // F or anything other than I,J,K,F is read.
-//  
-//  // BUG: I don't think that this should ever be called.
-//  //qDebug() << "WHAT THE HECK?? Parser.parseIJK() called";
-//  
-//  
-//   
-//
-//Original Java code that I never bothered porting.
-//   
-//   
-//  answer->type = Statement.IJK;
-//  
-//  // NOTE: I just left these variable names is x,y,z instead of changing them
-//  // to i,j,k.
-//  boolean xDefined = false;
-//  boolean yDefined = false;
-//  boolean zDefined = false;
-//  boolean fDefined = false;
-//  double xValue = 0.0;
-//  double yValue = 0.0;
-//  double zValue = 0.0;
-//  double fValue = 0.0;
-//  
-//  // Read stuff until the statment runs out, starting with the startToken.
-//  if (startToken.letter == 'I')
-//    {
-//      xDefined = true;
-//      xValue = startToken.d;
-//    }
-//  else if (startToken.letter == 'J')
-//    {
-//      yDefined = true;
-//      yValue = startToken.d;
-//    }
-//  else
-//    {
-//      zDefined = true;
-//      zValue = startToken.d;
-//    }
-//
-//  // Continue for up to two more letters.
-//  Token peekToken = theLexer.peekToken();
-//  while ((peekToken->letter == 'I') || (peekToken->letter == 'J') || 
-//      (peekToken->letter == 'K'))
-//    {
-//      // Go ahead and get it instead of just peeking.
-//      peekToken = theLexer.getToken();
-//      if (peekToken->letter == 'I')
-//        {
-//          if (xDefined == true)
-//            {
-//              // Error. Already read this value.
-//              answer->type = Statement::SError;
-//              answer->errMsg = formError(answer->lineNumber,"two I-values");
-//              return;
-//            }
-//          xDefined = true;
-//          xValue = peekToken->d;
-//        }
-//      else if (peekToken->letter == 'J')
-//        {
-//          if (yDefined == true)
-//            {
-//              // Error. Already read this value.
-//              answer->type = Statement::SError;
-//              answer->errMsg = formError(answer->lineNumber,"two J-values");
-//              return;
-//            }
-//          yDefined = true;
-//          yValue = peekToken->d;
-//        }
-//      else
-//        {
-//          if (zDefined == true)
-//            {
-//              // Error. Already read this value.
-//              answer->type = Statement::SError;
-//              answer->errMsg = formError(answer->lineNumber,"two K-values");
-//              return;
-//            }
-//          zDefined = true;
-//          zValue = peekToken->d;
-//        }
-//      
-//      // Peek to the next one.
-//      peekToken = theLexer.peekToken();
-//    }
-//  
-//  // Have read any I,J,K values. See if there is an F-value.
-//  if (peekToken->letter == 'F')
-//    {
-//      // Yes, move past the F-token.
-//      peekToken = theLexer.getToken();
-//      fDefined = true;
-//      fValue = peekToken->d;
-//    }
-//  
-//  // Statement has been read. Combine the data into a single object.
-//  answer->data = new MoveState(xDefined,yDefined,zDefined,fDefined,
-//                              xValue,yValue,zValue,fValue);
-//                              
-//}
-
-
-void Parser::parseSCode(Statement *answer,const Token *startToken)
-{
-  // Only two things are possible: S### M03 and S### M04.
-  // This is similar to what was done in parseMCode(), but the terms
-  // are reversed.
-  // So, startToken is the S### token. Check the next token.
-  // I need this in addition to the parseMCode() because the S and M
-  // terms can be in either order. Smid even says that the two terms
-  // don't even need to be on the same line, and can be seperated by
-  // other statements. I'm not going to go that far.
-  const Token *nextToken = NULL;
-  try {
-    nextToken = getToken();
-    if ((nextToken->letter != 'M') || 
-        ((nextToken->i != 3) && (nextToken->i != 4)))
+  
+  public static ArrayList<StxP> process(String gCode) {
+    
+    // Convert the entire G-code program to an array of statements.
+    ArrayList<StxP> answer = new ArrayList<>();
+    
+    Parser p = new Parser(Lexer.process(gCode));
+    
+    StxP s = p.readStatement();
+    
+    while (s.type != StxP.EOF)
       {
-        // S### is not followed by either M03 or M04.
-        answer->type = Statement::SError;
-        answer->errMsg = formError(answer->lineNumber,"spindle speed must be followed by M03 or M04");
-        readToEOLOrSemi();
-        return;
-      }
-  } catch (const Token* badToken) {
-    answer->type = Statement::SError;
-    answer->errMsg = badToken->errMsg;
-    readToEOLOrSemi();
-    return;
-  }
-  
-  // Got here, so all is well.
-  if (nextToken->i == 3)
-    answer->type = Statement::M03;
-  else
-    answer->type = Statement::M04;
-  
-  answer->data = new IntState(startToken->i);
-}
-
-void Parser::parseXYZ(Statement *answer,const Token *startToken)
-{
-  // Have just read an X, Y or Z token (in startToken). Read to the end of the 
-  // move. The form of a general statment of this type is
-  // [X#][Y#][Z#][F#]. The statement is considered complete as soon as either an
-  // F or anything other than X,Y,Z,F is peeked.
-  answer->type = Statement::MOVE;
-  bool xDefined = false;
-  bool yDefined = false;
-  bool zDefined = false;
-  bool fDefined = false;
-  double xValue = 0.0;
-  double yValue = 0.0;
-  double zValue = 0.0;
-  double fValue = 0.0;
-  
-  // Read stuff until the statment runs out, starting with the startToken.
-  if (startToken->letter == 'X')
-    {
-      xDefined = true;
-      xValue = startToken->d;
-    }
-  else if (startToken->letter == 'Y')
-    {
-      yDefined = true;
-      yValue = startToken->d;
-    }
-  else
-    {
-      zDefined = true;
-      zValue = startToken->d;
-    }
-
-  // Continue for up to two more letters.
-  try {
-    const Token *peekToken = theLexer.peekToken();
-    while ((peekToken->letter == 'X') || (peekToken->letter == 'Y') || 
-           (peekToken->letter == 'Z'))
-      {
-        // Go ahead and get it instead of just peeking.
-        peekToken = getToken();
-        if (peekToken->letter == 'X')
-          {
-            if (xDefined == true)
-              {
-                // Error. Already read this value.
-                answer->type = Statement::SError;
-                answer->errMsg = formError(answer->lineNumber,"two x-values");
-                readToEOLOrSemi();
-                return;
-              }
-            xDefined = true;
-            xValue = peekToken->d;
-          }
-        else if (peekToken->letter == 'Y')
-          {
-            if (yDefined == true)
-              {
-                // Error. Already read this value.
-                answer->type = Statement::SError;
-                answer->errMsg = formError(answer->lineNumber,"two y-values");
-                readToEOLOrSemi();
-                return;
-              }
-            yDefined = true;
-            yValue = peekToken->d;
-          }
-        else
-          {
-            if (zDefined == true)
-              {
-                // Error. Already read this value.
-                answer->type = Statement::SError;
-                answer->errMsg = formError(answer->lineNumber,"two z-values");
-                readToEOLOrSemi();
-                return;
-              }
-            zDefined = true;
-            zValue = peekToken->d;
-          }
-        
-        // Peek to the next one.
-        peekToken = theLexer.peekToken();
+        answer.add(s);
+        s = p.readStatement();
       }
     
-    // Have read any X,Y,Z values. See if there is an F-value.
-    if (peekToken->letter == 'F')
+    return answer;
+  }
+
+  public static String digestAll(String gcode) {
+    
+    // Take the given g-code and feed it through, producing a single String
+    // suitable for output to the user, or for use with unit tests.
+    ArrayList<StxP> theStatements = process(gcode);
+
+    StringBuffer answer = new StringBuffer();
+    
+    for (StxP s : theStatements)
       {
-        // Yes, move past the F-token.
-        peekToken = getToken();
-        fDefined = true;
-        fValue = peekToken->d;
+        answer.append(s.toString());
+        answer.append("\n");
       }
     
-    // Statement has been read. Combine the data into a single object.
-    answer->data = new MoveState(xDefined,yDefined,zDefined,fDefined,
-                                 xValue,yValue,zValue,fValue);
-  } catch (const Token* badToken) {
-    answer->type = Statement::SError;
-    answer->errMsg = badToken->errMsg;
-    readToEOLOrSemi();
+    return answer.toString();
   }
-}
-
-void Parser::reset()
-{
-  // Restart from the very beginning of theCode.
-  theLexer.reset();
-  fillOneBuffer(this->statements.bufA);
-  fillOneBuffer(this->statements.bufB);
   
-  this->statements.curBuf = this->statements.bufA;
-  this->statements.index = 0;
-}
-
-void Parser::moveTo(int n,int lineNumber) 
-{
-  
-  // Restart the parsing process at the n-th character, which is assumed
-  // to be on the given line number.
-  theLexer.moveTo(n,lineNumber);
-  
-  // Restart the buffers.
-  fillOneBuffer(this->statements.bufA);
-  fillOneBuffer(this->statements.bufB);
-  
-  this->statements.curBuf = this->statements.bufA;
-  this->statements.index = 0;
-}
-
-const Statement *Parser::getStatement()
-{
-  // Return the next Statement in the buffer. As in the Lexer, we must
-  // first see if we've run off the end of the buffer.
-  //
-  // This is a bit tricker than what I did in the lexer since there
-  // are three sub-buffers. When we come to the end of bufA, we need to
-  // move to the start of bufB, and fill bufC. We do not refill bufA
-  // because a higher layer (Layer05, in fact) might be holding a past
-  // statement in memory. When we come to the end of bufB, move to the
-  // start of bufC, and refill bufA, leaving bufB alone. When we come
-  // to the end of bufC, move to the start of bufA, and refill bufB,
-  // leaving bufC alone.
-  if (statements.index >= statements.BufferSize)
-    {
-      if (statements.curBuf == statements.bufA)
-        {
-          statements.curBuf = statements.bufB;
-          fillOneBuffer(statements.bufC);
-        }
-      else if (statements.curBuf == statements.bufB)
-        {
-          statements.curBuf = statements.bufC;
-          fillOneBuffer(statements.bufA);
-        }
-      else
-        {
-          // Reached the end of bufC;
-          statements.curBuf = statements.bufA;
-          fillOneBuffer(statements.bufB);
-        }
-      statements.index = 0;
-    }
-  
-  Statement *answer = &(statements.curBuf[statements.index]);
-  ++statements.index;
-  
-  return answer;
-}
-
-const Statement *Parser::peekStatement()
-{
-  // Like the Lexer, we have to be tricky in case the next
-  // getStatment() goes to a new buffer.
-  if (statements.index >= statements.BufferSize)
-    {
-      if (statements.curBuf == statements.bufA)
-        return &(statements.bufB[0]);
-      else
-        return &(statements.bufA[0]);
-    }
-  else
-    return &(statements.curBuf[statements.index]);
 }
 
 
 
 
-*/

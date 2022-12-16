@@ -34,7 +34,7 @@ class TabDropTargetListener implements DropTargetListener {
   }
 
 
-  @Override public void dragEnter(DropTargetDragEvent e) {
+  public void dragEnter(DropTargetDragEvent e) {
     
     getGhostGlassPane(e.getDropTargetContext().getComponent()).ifPresent(glassPane -> {
       Transferable t = e.getTransferable();
@@ -47,7 +47,7 @@ class TabDropTargetListener implements DropTargetListener {
     });
   }
 
-  @Override public void dragExit(DropTargetEvent e) {
+  public void dragExit(DropTargetEvent e) {
     
     getGhostGlassPane(e.getDropTargetContext().getComponent()).
       ifPresent(glassPane -> {
@@ -58,11 +58,11 @@ class TabDropTargetListener implements DropTargetListener {
       });
   }
 
-  @Override public void dropActionChanged(DropTargetDragEvent e) {
+  public void dropActionChanged(DropTargetDragEvent e) {
     // not needed
   }
 
-  @Override public void dragOver(DropTargetDragEvent e) {
+  public void dragOver(DropTargetDragEvent e) {
 
     // This sets the vertical rectangle that indicates where the drop will
     // take place.
@@ -79,7 +79,7 @@ class TabDropTargetListener implements DropTargetListener {
     });
   }
 
-  @Override public void drop(DropTargetDropEvent e) {
+  public void drop(DropTargetDropEvent e) {
 
     System.out.println("target drop");
     

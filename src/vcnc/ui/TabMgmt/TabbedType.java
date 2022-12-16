@@ -1,6 +1,7 @@
 package vcnc.ui.TabMgmt;
 
 /*
+
 Each "displayed thing," like what would appear under a tab in the main
 window, has a type. This way, it's easy to determine what kind of information
 is in any given tab. These "displayed things" can also appear in their own
@@ -15,6 +16,8 @@ output or some intermediate form of the code -- it's all text.
 
 */
 
+// BUG: Incomplete list of cases. Need additional layers.
+
 public enum TabbedType {
   
   UNKNOWN
@@ -23,6 +26,9 @@ public enum TabbedType {
                 // This may be displayed with or without line numbers.
   ,LEXER_OUT    // Display of the tokens that come from the Lexer.
   ,PARSER_OUT   // Display of full statements.
+  ,LAYER0A_OUT
+  ,LAYER0B_OUT
+  ,LAYER00_OUT
   ;
 }
 

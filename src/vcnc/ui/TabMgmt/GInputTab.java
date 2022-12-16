@@ -20,7 +20,6 @@ import vcnc.ui.LineNumbers.TextLineNumber;
 public class GInputTab extends JScrollPane implements TypedDisplayItem {
   
   TabbedType type = TabbedType.G_INPUT;
-  public TabbedType type() { return type; }
   
   // What is shown -- the G-code.
   private JTextArea theText = new JTextArea();
@@ -34,9 +33,18 @@ public class GInputTab extends JScrollPane implements TypedDisplayItem {
   // G-code leads to various outputs: partially or fully transpiled code,
   // renderings, etc. This tracks what has been generated from this G-code.
   // G-code can lead to any of these.
+
+  // BUG: This will need to be completed for the additional layers.
   public LexerTab lexOut = null;
-  public ParserTab parseOut = null;
+  public OutputTextTab parseOut = null;
+  public OutputTextTab layer0AOut = null;
+  public OutputTextTab layer0BOut = null;
+  public OutputTextTab layer00Out = null;
+
   
+  public TabbedType type() {
+    return type;
+  }
   
   public GInputTab(String text) {
     

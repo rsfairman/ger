@@ -2,11 +2,6 @@ package vcnc.tpile;
 
 /*
 
-BUG: See Parser. I may need to use three buffers there for the Statements
-to allow peeking forward AND back. That's what I did in the C++ version.
-I copied a comment from the C++ to Parser.java about this. There may be
-additional comments about the issue in the parser.cpp file.
-
 BUG: Add yet another layer to remove codes that don't do anything when
 rendering (coolant, spindle speed and the like). This means that I should be 
 more careful in earlier layers about *not* stripping that stuff out.
@@ -16,8 +11,7 @@ more careful in earlier layers about *not* stripping that stuff out.
 Another layer to the interpreter.
 
 Layer00 handles subroutine calls and returns. This removes M98 and M99 from
-      the input stream, along with a bunch of things that I don't handle
-      or that don't mean anything in a virtual context, like coolant on/off.
+      the input stream, plus any O-codes.
 Layer01 converts all values to the standard units of the machine, inches or mm.
       G20 and G21 disappear from the statement stream. Also checks that G02/03
       are given correctly (e.g., no K-value when in G17/XY-plane mode).
@@ -181,11 +175,11 @@ that they are trying to *do* something crazy.
 
 import java.util.ArrayDeque;
 
+import vcnc.Statement;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.DataRegister;
 import vcnc.tpile.parse.StatementData;
-import vcnc.tpile.parse.Statement;
 
 
 public class Layer05 {

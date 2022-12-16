@@ -1,4 +1,16 @@
-package vcnc.tpile.parse;
+package vcnc;
+
+// BUG: Get rid of this. It's hanging around while I refactor.
+
+
+import vcnc.tpile.parse.DataCircular;
+import vcnc.tpile.parse.DataInt;
+import vcnc.tpile.parse.DataMove;
+import vcnc.tpile.parse.DataRegister;
+import vcnc.tpile.parse.DataSubProg;
+import vcnc.tpile.parse.DataSubroutineCall;
+import vcnc.tpile.parse.DataWizard;
+import vcnc.tpile.parse.StatementData;
 
 /*
 
@@ -8,6 +20,7 @@ to the internal state of the machine, like moving in and out of incremental
 mode.
 
 */
+
 
 public class Statement {
 	
@@ -91,8 +104,6 @@ public class Statement {
 	// A special case:
 	public static final short WIZARD = 20000;
 	
-	
-	
 	// One of the constants above.
 	public short type;
 	
@@ -108,6 +119,7 @@ public class Statement {
 	public String error = null;
 	
   // If this is true, then the error above is merely a warning
+	// BUG: Is this actually used?
   public boolean warning = false;
 	
 	// This will often be null. For the first set of simple statements (the ones
@@ -116,10 +128,12 @@ public class Statement {
 	// the statement.
 	public StatementData	data = null;
 	
+	
 	public Statement() {
 	  // Do-nothing.
 	  // BUG: Don't like this do-nothing. A Statement should require a type,
-	  // so that only the other constructor makes sense.
+	  // so that only the other constructor makes sense.]
+	  // Make this private or get rid of entirely.
 	}
 	
 	public Statement(short type) {

@@ -1,8 +1,17 @@
 package vcnc.tpile;
 
+/*
+
+Converts all units to a single choice (inches or mm), so G20 and G21 disappear.
+
+It also checks whether G02 and G03 make geometric sense in light of the
+choices of plane.
+
+*/
+
+import vcnc.Statement;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
-import vcnc.tpile.parse.Statement;
 
 
 public class Layer01 {
@@ -179,6 +188,14 @@ public class Layer01 {
     
     // Read and translate statements to be passed up to the next layer.
   
+    
+    // SUPER BOGUS THING WHILE REFACTORING...
+    return null;
+    
+    
+    /*
+    This is what it's supposed to do...
+        
     Statement cmd = lowerLayer.nextStatement();
   
     // Don't return until some Statement have been found.
@@ -241,6 +258,7 @@ public class Layer01 {
         // Not done. Look at next statement.
         cmd = lowerLayer.nextStatement();
       }
+      */
   }
   
   public void reset() {

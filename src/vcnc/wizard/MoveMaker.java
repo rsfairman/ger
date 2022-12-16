@@ -1,69 +1,81 @@
 package vcnc.wizard;
 
+/*
+
+Used by WizardBase to form move commands.
+
+Up through v09, indicating a move in a wizard went something like
+
+Move().X(3.0).F(40.0).close();
+
+where Move() creates a MoveMaker, and the close() was to "seal" it, indicating
+that all of the X/Y/Z/F values intended have been specified. As of v10, the
+close() is no longer needed.
+
+*/
+
+
+import java.util.ArrayList;
+
+import vcnc.tpile.St0B;
+
 import vcnc.tpile.parse.DataMove;
-import vcnc.tpile.parse.Statement;
 
 
 public class MoveMaker {
-
-  public boolean xDefined = false;
-  public boolean yDefined = false;
-  public boolean zDefined = false;
-  public boolean fDefined = false;
   
-  public double xValue = 0.0;
-  public double yValue = 0.0;
-  public double zValue = 0.0;
-  public double fValue = 0.0;
+  // This move is going to be added to this longer list of G-codes as
+  // part of a wizard implementation.
+  private DataMove theMove = null;
+  
+  
+  public MoveMaker(ArrayList<St0B> wizout) {
+    
+    // Insert a place-holder move into wizout, and each time one of X/Y/Z/F
+    // is changed, this move is updated.
+    St0B theCode = new St0B(St0B.MOVE);
+    
+    this.theMove = new DataMove();
 
+    theMove.xDefined = false;
+    theMove.yDefined = false;
+    theMove.zDefined = false;
+    theMove.fDefined = false;
+    
+    theCode.data = theMove;
+    
+    wizout.add(theCode);
+  }
+  
   public MoveMaker X(double value) {
     
-    this.xDefined = true;
-    this.xValue = value;
+    theMove.xDefined = true;
+    theMove.xValue = value;
     return this;
   }
   
   public MoveMaker Y(double value) {
     
-    this.yDefined = true;
-    this.yValue = value;
+    theMove.yDefined = true;
+    theMove.yValue = value;
     return this;
   }
   
   public MoveMaker Z(double value) {
     
-    this.zDefined = true;
-    this.zValue = value;
+    theMove.zDefined = true;
+    theMove.zValue = value;
     return this;
   }
   
   public MoveMaker F(double value) {
     
-    this.fDefined = true;
-    this.fValue = value;
+    theMove.fDefined = true;
+    theMove.fValue = value;
     return this;
   }
   
-  public Statement close() {
-    
-    // This must be called last to "seal" the move and convert it to a 
-    // Statement.
-    Statement answer = new Statement();
-    answer.type = Statement.MOVE;
-    
-    DataMove m = new DataMove();
-    
-    m.xDefined = this.xDefined;
-    m.yDefined = this.yDefined;
-    m.zDefined = this.zDefined;
-    m.fDefined = this.fDefined;
-    m.xValue = this.xValue;
-    m.yValue = this.yValue;
-    m.zValue = this.zValue;
-    m.fValue = this.fValue;
-    
-    answer.data = m;
-    
-    return answer;
-  }
 }
+
+
+

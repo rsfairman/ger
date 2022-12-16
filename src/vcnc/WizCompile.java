@@ -23,8 +23,14 @@ Other approaches are JANINO and the Apache JCI.
 */
 
 import java.io.File;
+import java.io.IOException;
 
 import java.net.URL;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
@@ -103,6 +109,7 @@ public class WizCompile {
     // Go ahead and set things to stdout/err when running from the CLI,
     // but not as a GUI.
     int result = -1;
+    /*
     if (Main.runningAsCLI() == true)
       result = compiler.run(null,System.out,System.err,
           "-cp","C:\\Users\\rsf\\Documents\\WorkArea\\vcnc\\bin",
@@ -111,15 +118,51 @@ public class WizCompile {
       result = compiler.run(null,null,null,
         "-cp","C:\\Users\\rsf\\Documents\\WorkArea\\vcnc\\bin",
         Persist.getGerLocation() + File.separator + wName + ".java");
-      
+      */
+    
+    if (Main.runningAsCLI() == true)
+      result = compiler.run(null,System.out,System.err,"-cp",cp,
+          Persist.getGerLocation() + File.separator + wName + ".java");
+    else
+      result = compiler.run(null,null,null,"-cp",cp,
+        Persist.getGerLocation() + File.separator + wName + ".java");
+    
+    
     if (result != 0)
       // Compilation failure.
       return false;
       
     
+    // This is annoying, but the *.class file ends up at the same directory
+    // as the *.java file. It needs to be in a directory with a name matching
+    // the package -- wizard_test.
+    // BUG: Is there a better way? Why are these things in a package at all?
+    try {
+      Path src = new 
+          File(Persist.getGerLocation() + File.separator +wName+ ".class").
+          toPath();
+      
+      // BUG: Hard-coding 'wizard_test'.
+      File ddir = new 
+          File(Persist.getGerLocation() + File.separator + "wizard_test");
+      
+      if (ddir.exists() == false)
+        ddir.mkdirs();
+        
+      Path dest = new 
+          File(Persist.getGerLocation() + File.separator +
+              "wizard_test" + File.separator + wName+ ".class").
+          toPath();
+      Files.move(src,dest,StandardCopyOption.REPLACE_EXISTING);
+    } catch (IOException e) {
+      // BUG: This error should be impossible.
+      System.err.println("Problem moving file: " +e.getMessage());
+    }
+    
+    
 //    System.err.println("done compile attempt");
     
-    return false;
+    return true;
   }
 
 }

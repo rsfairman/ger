@@ -2,8 +2,6 @@ package vcnc.ui.TabbedPaneDnD;
 
 /*
 
-Modified from Oracle...
-
 Use this to create an X-looking close button in the tabs of a JTabbedPane.
 
 */ 
@@ -21,6 +19,7 @@ class ButtonTabComponent extends JPanel {
   
   private JLabel theLabel = null; 
 
+  //public ButtonTabComponent(final JTabbedPane pane,TabCloser closer) {
   public ButtonTabComponent(final JTabbedPane pane) {
     
     // This makes things a little tighter, visually.
@@ -74,17 +73,20 @@ class TabButton extends JButton implements ActionListener {
   
   JTabbedPane theTabs = null;
   ButtonTabComponent whichTab;
+//  TabCloser theCloser = null;
   
-  //public TabButton(JTabbedPane theTabs) {
+  
+  //public TabButton(ButtonTabComponent whichTab,TabCloser closer) {
   public TabButton(ButtonTabComponent whichTab) {
     
     this.theTabs = whichTab.pane;
     this.whichTab = whichTab;
+//    this.theCloser = closer;
     
     int size = 17;
     setPreferredSize(new Dimension(size, size));
     
-    // BUG: THis is obvious. Get rid.
+    // BUG: This is obvious. Get rid.
     setToolTipText("close this tab");
     
     //Make the button looks the same for all Laf's
@@ -107,7 +109,7 @@ class TabButton extends JButton implements ActionListener {
     // BUG: Do we care about "rollovers?" Think not.
     setRolloverEnabled(true);
     
-    //Close the proper tab by clicking the button
+    // Close the proper tab by clicking the button
     addActionListener(this);
   }
 
@@ -119,12 +121,19 @@ class TabButton extends JButton implements ActionListener {
     if (i != -1)
       {
         System.out.println("going away");
+        
+//        if (this.theCloser != null)
+//          theCloser.doClose();
+        
+        // Note that this *removes* the tab, but it doesn't eliminate all
+        // references to the corresponding Component.
         theTabs.remove(i);
       }
   }
 
   //we don't want to update UI for this button
   public void updateUI() {
+    
   }
 
   //paint the cross

@@ -23,7 +23,7 @@ Sometimes, they'll be different, even though there is no error because the code
 was changed -- and changed correctly. When this happens, manually copy 
 'lex_test_id.out' to 'lex_test_id.ref' for future tests.
 
-BUG: As these tests proliferate, it might make sense to put them in 
+BUG: If these tests proliferate, it might make sense to put them in 
 sub-directories of unit_tests, one sub-dir for each layer.
 
 */
@@ -46,9 +46,10 @@ public class UnitTests {
   // string, which is weird. There are other ways to get the classpath
   // using the ClassLoader, but that seems too fiddly.
   //
-  // Instead, the user.dir (aka, working directory) points to the root
-  // of the entire project. This might not work if I these tests are run
-  // from a jar file.
+  // BUG: This is set up to make it easy to run these tests more easily from
+  // Eclipse if I want. The default here is where the file are ordinarily
+  // stored, but you can change with setDir(), below.
+  // Obviously, none of this will be in the production version anyway.
   private static String testDir = System.getProperty("user.dir") + 
       File.separator + "unit_tests";
   
@@ -65,7 +66,12 @@ public class UnitTests {
       "parse_test_01"
   };
   
-
+  public static void setDir(String dir) {
+    testDir = dir;
+  }
+  
+  // BUG: These test methods are nearly identical. Combine them somehow.
+  
   public static void testLexer() {
     
     // Run all the lexer tests...
@@ -94,40 +100,36 @@ public class UnitTests {
   
   public static void testParser() {
     
-    // Run all the lexer tests...
+    // As above.
     for (int i = 0; i < parseTests.length; i++)
       {
-        // Load an entire test file for input.
         String inString = 
             FileIOUtil.loadFileToString(testDir,parseTests[i]+".in");
         
-        // Run through the Parser.
         // BUG: Get rid of exceptions?
         try {
           String outString = Translator.digestAll(inString,-1);
 
-          // Save the resulting output.
           FileIOUtil.saveStringAsAscii(
               testDir,parseTests[i] + ".out",outString);
           
-          // Read the reference file.
           String refString = 
               FileIOUtil.loadFileToString(testDir,parseTests[i] + ".ref");
           
-          // Compare the two Strings, and flag the problem, if there is one.
           if (refString.equals(outString) == false)
             System.err.println("Unit test failed for " +parseTests[i]);
           
         } catch (Exception e) {
           System.err.println("Parsing exception: " + e.getMessage());
         }
-          
-        
       }
   }
-    
-    
-    
+  
+  public static void testAll() {
+
+    testLexer();
+    testParser();
+  }
 
   
 }

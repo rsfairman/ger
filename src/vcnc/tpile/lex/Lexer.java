@@ -1,5 +1,13 @@
 package vcnc.tpile.lex;
 
+/*
+
+Produce a series of Token objects that are fed to the Parser.
+
+*/
+
+import java.util.ArrayList;
+
 import vcnc.tpile.CodeBuffer;
 
 
@@ -10,9 +18,6 @@ public class Lexer {
   
   // The line currently being read. This is needed to report errors.
   private int lineCount = 1;
-  
-  // This is where the tokens are held as they are generated.
-  private TokenBuffer tokens = null;
   
   // Go into wizard mode when a token starts with two letters. Leave wizard
   // mode when you reach EOL. We need to distinguish this mode because tokens 
@@ -25,55 +30,10 @@ public class Lexer {
   private final int CommentNested = 2;
   
     
-  public Lexer(CodeBuffer gCode) {
+  private Lexer(CodeBuffer gCode) {
 
     this.theCode = gCode;
     this.lineCount = 1;
-    
-    // Ready the buffer by filling it.
-    this.tokens = new TokenBuffer();
-    tokens.first = fillOneBuffer();
-    tokens.second = fillOneBuffer();
-  }
-  
-  public static String digestAll(String gcode) {
-    
-    // Take the given g-code and feed it through, producing a single String
-    // suitable for output to the user, or for use with unit tests.
-    
-    Lexer theLexer = new Lexer(new CodeBuffer(gcode));
-
-    StringBuffer theBuffer = new StringBuffer();
-    
-    Token tok = theLexer.getToken();
-    while (tok.letter != Token.EOF)
-      {
-        theBuffer.append(tok.toString());
-        theBuffer.append("\n");
-        
-        tok = theLexer.getToken();
-      }
-    
-    return theBuffer.toString();
-  }
-  
-  public void reset() {
-    
-    // Reset the lexer to start over at character zero (on line 1).
-    moveTo(0,1);
-  }
-  
-  public void moveTo(int n,int assumedLine) {
-    
-    // Set the lexer to start over at the n-th character, which is assumed to be
-    // on the given line number. This matters for sub-programs.
-    theCode.reset(n);
-    this.lineCount = assumedLine;
-    
-    // Ready the buffer by filling it.
-    this.tokens = new TokenBuffer();
-    tokens.first = fillOneBuffer();
-    tokens.second = fillOneBuffer();
   }
   
   private String formError(int badLine,String msg) {
@@ -588,8 +548,6 @@ public class Lexer {
     
     // There are only two possible types of token here: numbers and strings.
     char c = peekc();
-    //System.out.println("wiz peek: " +Character.getNumericValue(c));
-//    System.out.println("wiz peek: " + (short) c);
     
     if (c == Token.EOF)
       {
@@ -620,9 +578,6 @@ public class Lexer {
         answer = new Token(Token.NUMBER,lineCount);
         try {
           answer.d = readDouble();
-          
-//          System.out.println("read " +answer.d);
-          
         } catch (Exception e) {
           answer.letter = Token.ERROR;
           answer.error = formError(lineCount,
@@ -682,9 +637,6 @@ public class Lexer {
         // numbers and strings up till we reach EOL.
         answer = readWizardToken();
         
-        // BUG: Testing
-//        System.out.println("wiz token: " +answer.toString());
-        
         if ((answer.letter == Token.EOL) || (answer.letter == Token.EOF))
           this.wizardMode = false;
         
@@ -702,9 +654,6 @@ public class Lexer {
         // a call to an external wizard function.
         this.wizardMode = true;
         answer = readWord(c);
-        
-        // BUG: Testing
-//        System.out.println("Wizard word: " +answer.toString());
         
         answer.endCount = theCode.getLastCharIndex();
         return answer;
@@ -752,42 +701,39 @@ public class Lexer {
     return answer;
   }
   
-  private Token[] fillOneBuffer() {
+  public static ArrayList<Token> process(String gCode) {
     
-    // Fill an array with TokenBuffer.BufferSize tokens, reading from gCode 
-    // starting at the index-th character.
-    Token[] answer = new Token[TokenBuffer.BufferSize];
+    // Convert the entire G-code program to an array of Token objects.
+    ArrayList<Token> answer = new ArrayList<>();
     
-    for (int i = 0; i < answer.length; i++)
-      answer[i] = readToken();
+    Lexer lex = new Lexer(new CodeBuffer(gCode));
     
-    return answer;
-  }
-  
-  public Token getToken() {
-    
-    // Return a token from the buffer. If this is the last token in 
-    // tokens.first, then refill the buffer.
-    Token answer = tokens.first[tokens.index];
-    ++tokens.index;
-    
-    if (tokens.index >= TokenBuffer.BufferSize)
+    Token t = lex.readToken();
+    while (t.letter != Token.EOF)
       {
-        // Need to refresh.
-        tokens.first = tokens.second;
-        tokens.second = fillOneBuffer();
-        tokens.index = 0;
+        answer.add(t);
+        t = lex.readToken();
       }
     
     return answer;
   }
-  
-  public Token peekToken() {
+
+  public static String digestAll(String gcode) {
     
-    // Return the next token from the buffer, but don't advance the index.
-    return tokens.first[tokens.index];
+    // Take the given g-code and feed it through, producing a single String
+    // suitable for output to the user, or for use with unit tests.
+    ArrayList<Token> theTokens = process(gcode);
+
+    StringBuffer answer = new StringBuffer();
+    
+    for (Token t : theTokens)
+      {
+        answer.append(t.toString());
+        answer.append("\n");
+      }
+    
+    return answer.toString();
   }
-  
   
 }
 

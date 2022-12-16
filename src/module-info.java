@@ -9,6 +9,6 @@ module vcnc {
   // To use java.uti.prefs.Preferences.
   requires java.prefs;
 	
-//	requires vcnc;
-//	requires vcnc.rsf;
+  // So the class loader can find wizards that are dynamically loaded.
+  exports vcnc.wizard;
 }

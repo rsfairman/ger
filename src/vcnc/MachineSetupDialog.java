@@ -30,6 +30,10 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.SpringLayout;
+
+import vcnc.persist.Persist;
+import vcnc.tpile.MachineState;
+
 import javax.swing.JTabbedPane;
 
 
@@ -37,6 +41,18 @@ class MachineSetupDialog extends JDialog implements ActionListener {
 
   private static float grayLevel = 0.6f;
   private static Color myGray = new Color(grayLevel,grayLevel,grayLevel);
+
+  // The user's choices in the dialog are stored here while the dialog
+  // is open. It's a copy of the relevant items in the MachineState global,
+  // and is needed in case the user cancels his changes.
+  
+  class TempMachineState {
+   
+   boolean machineInchUnits = true;
+     
+  }
+  
+  private TempMachineState tempState = new TempMachineState();
   
   
   public MachineSetupDialog(Frame parent) {
@@ -44,6 +60,13 @@ class MachineSetupDialog extends JDialog implements ActionListener {
     super(parent,"Machine Setup");
     this.setModalityType(Dialog.ModalityType.APPLICATION_MODAL);
     
+    // Copy the relevant items from the static MachineSettings to the 
+    // temporary copy used here.
+    // BUG: Not doing tool turret or workoffsets yet. Those classes
+    // will need some kind of deep copy method.
+    tempState.machineInchUnits = MachineState.machineInchUnits;
+    
+    // The GUI layout...
     // BUG: Looks like I need to set the background colors for all the
     // individual JPanels.
     //this.setBackground(myGray);
@@ -75,7 +98,7 @@ class MachineSetupDialog extends JDialog implements ActionListener {
     
     JRadioButton inchBut = new JRadioButton("inch",true);
     inchBut.addActionListener(this);
-    JRadioButton mmBut = new JRadioButton("mm",true);
+    JRadioButton mmBut = new JRadioButton("mm",false);
     mmBut.addActionListener(this);
 
     radioPanel.add(inchBut);
@@ -86,6 +109,11 @@ class MachineSetupDialog extends JDialog implements ActionListener {
     
     unitPanel.add(radioPanel,gridCon);
     this.getContentPane().add(unitPanel,"North");
+    
+    // Set the correct choice: inch or mm.
+    if (tempState.machineInchUnits == false)
+      mmBut.setSelected(true);
+    // else defaults to inch
     
     // DONE with the inch/mm area.
     
@@ -145,15 +173,24 @@ class MachineSetupDialog extends JDialog implements ActionListener {
           }
           */
         
-        System.out.println("said OK");
+        // Make the temporary choices permanent.
+        // BUG: Not doing tool turret or work offsets. Note that a deep
+        // copy will not be needed in this case.
+        MachineState.machineInchUnits = this.tempState.machineInchUnits;
+        
+        // And save the changes to disk.
+        Persist.save();
+        
         this.dispose();
       }
     else if (e.getActionCommand().equals("Cancel"))
       // Forget the whole thing...
       this.dispose();
-    //else if (e.getActionCommand().equals("inch))
-    else
-      System.out.println("said " + e.getActionCommand());
+    else if (e.getActionCommand().equals("inch"))
+      this.tempState.machineInchUnits = true;
+    else if (e.getActionCommand().equals("mm"))
+        this.tempState.machineInchUnits = false;
+    
     
   }
 

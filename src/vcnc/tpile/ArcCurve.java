@@ -1,8 +1,8 @@
 package vcnc.tpile;
 
+import vcnc.Statement;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.StatementData;
-import vcnc.tpile.parse.Statement;
 
 
 public class ArcCurve extends ToolCurve {

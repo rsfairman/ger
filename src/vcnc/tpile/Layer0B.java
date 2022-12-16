@@ -3,27 +3,27 @@ package vcnc.tpile;
 /*
 
 Comes after Layer0A, which removes (and acts on) any "machine directives."
-This removes any user-defined functions (wizards), all of which must appear
-after the O-number that opens the program proper. 
+This layer removes any user-defined functions (wizards), all of which must 
+appear after the O-code that opens the program proper. So, that's one type 
+of statement that's been removed from the stream. 
 
-There are two problems to be solved here. The easier problem is converting
-a wizard statement to G-code. The harder one is compiling the wizard code
-from .java to .class and loading it.
+There are two problems to be solved here: converting a wizard statement to 
+G-code (expansion), and compiling the wizard code from .java to .class and 
+loading it.
 
 Ideally, the user should be able to drop a .java file into the .ger directory
 and have it compile automatically, but that requires too much UI infrastructure
-to be reasonable as the normal course of events. Instead, compilation should 
-be done through the CLI -- although it is attempted here too.
+(for the user to debug his code) to be reasonable as the normal course of 
+events. Instead, compilation should be done through the CLI -- although it is 
+attempted here too; maybe the user will get lucky and his code will compile 
+with no issues. Or maybe he knows that the code is correct and just wants to
+drop in the *.java file on a different machine.
 
 */
 
-import java.util.Stack;
-import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.Arrays;
+import java.util.ArrayList;
 
-import java.io.File;
 import java.io.IOException;
 
 import java.nio.file.Path;
@@ -33,28 +33,19 @@ import java.net.URL;
 import java.net.MalformedURLException;
 import java.net.URLClassLoader;
 
-import javax.tools.ToolProvider;
-import javax.tools.JavaCompiler;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.StandardLocation;
-
-import vcnc.tpile.parse.Statement;
-import vcnc.tpile.parse.StatementBuffer;
-import vcnc.WizCompile;
 import vcnc.persist.Persist;
 import vcnc.tpile.parse.DataWizard;
+import vcnc.WizCompile;
+
 import vcnc.wizard.WizardBase;
 
 
 public class Layer0B {
-  
-  // The layer prior to this one.
-  private Layer0A lowerLayer = null;
-  
-  // Wizards may create an entire set of statements, and they are produced
-  // from a single incoming Statement, so the output must be held in a buffer 
-  // to be handed out one Statement at a time to the next layer.
-  private StatementBuffer statements = null;
+
+  // The statement objects from the lower layer, and the mark of where we
+  // are in processing them.
+  private ArrayList<StxP> theStatements = null;
+  private int statementIndex = 0;
   
   // Wizards must appear after the O-statement. In theory, this requirement
   // could be relaxed, but being strict about this should make the distinction
@@ -62,13 +53,27 @@ public class Layer0B {
   private boolean seenOCommand = false; 
   
   
-  Layer0B(CodeBuffer theText) throws Exception {
+  Layer0B(ArrayList<StxP> smnts) {
+    this.theStatements = smnts;
+    this.statementIndex = 0;
+  }
+  
+  private StxP getLower() {
     
-    this.lowerLayer = new Layer0A(theText);
+    if (statementIndex >= theStatements.size())
+      return new StxP(StxP.EOF);
     
-    this.statements = new StatementBuffer();
-    statements.first = fillOneBuffer();
-    statements.second = fillOneBuffer();
+    StxP answer = theStatements.get(statementIndex);
+    ++statementIndex;
+    return answer;
+  }
+  
+  private StxP peekLower() {
+    
+    if (statementIndex >= theStatements.size())
+      return new StxP(StxP.EOF);
+    
+    return theStatements.get(statementIndex);
   }
 
   private String formError(int lineNumber,String msg) {
@@ -76,79 +81,72 @@ public class Layer0B {
     return "Error on line " +lineNumber+ ": " +msg;
   }
   
-  private Statement formError(Statement s,String msg) {
+  private St0B formError(St0B s,String msg) {
     
     // BUG: This is a much better way to do things.
     // See I can get rid of the "other" formError() in all classes that do this.
-    Statement answer = new Statement(Statement.ERROR);
+    St0B answer = new St0B(St0B.ERROR);
     answer.lineNumber = s.lineNumber;
     answer.charNumber = s.charNumber;
     answer.error = formError(s.lineNumber,msg);
     return answer;
   }
   
-  private Statement[] fillOneBuffer() {
+  private ArrayList<St0B> nextStatements() {
     
-    // Similar to Parser, but I don't know in advance what the buffer
-    // size needs to be. If one of the source statements is a wizard
-    // command, then it could expand to a huge number of Statements.
-    ArrayList<Statement> buf = new ArrayList<>();
+    // Pull a single statement out of the array from Layer0A, and convert it.
+    // Most of this time, there's nothing to do, but wizards may be transformed
+    // to a large number of statements. That's why this returns an array.
+    // 
+    // So the result will either be an array with a single entry (the usual
+    // case), or a longer array due to wizard expansion.
     
-    int i = 0;
-    while (i < StatementBuffer.BufferSize)
-      {
-        // Get a single statement from the parser and expanded it if
-        // it's a wizard.
-        Statement s = lowerLayer.nextStatement();
+    // Get a single statement from Layer0A and expand it if it's a wizard.
+    StxP s = getLower();
+    
+    // BUG: What if we get an EOF? Especially if there is no O-command.
         
-        // BUG: What if we get an EOF? Especially if there is no O-command.
+    if (s.type != StxP.WIZARD)
+      {
+        // Any non-wizard statement is simply passed along.
+        if (s.type == StxP.PROG)
+          this.seenOCommand = true;
 
-        if (s.type == Statement.PROG)
-          {
-            this.seenOCommand = true;
-            buf.add(s);
-            ++i;
-            continue;
-          }
-        else if (s.type == Statement.WIZARD)
-          { 
-            if (this.seenOCommand == false)
-              {
-                // Machine directives (that occur before the O-statement) have
-                // been filtered out by the previous layer of the translator.
-                // So any wizard before the O-statement is in error.
-                DataWizard wizData = (DataWizard) s.data;
-                Statement err = 
-                    formError(s,"Unknown machine directive: " +wizData.cmd);
-                buf.add(err);
-                ++i;
-              }
-            else
-              {
-                // O-command is past. Must be a real wizard requiring 
-                // expansion.
-                ArrayList<Statement> exp = expandWizard(s);
-                buf.addAll(exp);
-                i += exp.size();
-              }
-          }
-        else
-          {
-            // Some ordinary Statement.
-            buf.add(s);
-            ++i;
-          }
+        // This implicitly converts to the correct type. It's an array (with 
+        // one element) of StxP objects, but the only difference between these
+        // types is a single static final value (WIZARD). So it's not really
+        // of the correct type, but that doesn't hurt anything.
+        return new ArrayList<>(List.of(s));
       }
     
-    // Convert to an ordinary array.
-    Statement[] answer = (Statement[]) buf.toArray(new Statement[0]);
-    return answer;
+    // Must be a wizard.
+    if (this.seenOCommand == false)
+      {
+        // Machine directives (that occur before the O-statement) have been 
+        // filtered out by the previous layer of the translator. So any 
+        // wizard before the O-statement is in error. It should be impossible
+        // for this to arise anyway.
+        DataWizard wizData = (DataWizard) s.data;
+        St0B err = 
+            formError(s,"Unknown machine directive: " +wizData.cmd);
+        return new ArrayList<>(List.of(err));
+      } 
+    
+    // The error-free case. Expand the wizard.
+    return expandWizard(s);
   }
 
   private WizardBase classLoadable(String cName) {
     
     // Attempt to load the given class. If that's possible, then load it and
     // return it. Otherwise, return null.
+    //
+    // IMPORTANT. For this to work, the module-info file must include the line
+    // exports vcnc.wizard
+    // I'm a little unclear why this is, but the gist seems to be that it's
+    // because the *.class file being loaded is outside the usual directory
+    // hierarchy (or the JaR file) and the class loader needs some kind (?)
+    // of special permission 
     //
     // BUG: the package name 'wizard_test' is hard-coded.
     // BUG: Change method name to attemptLoad().
@@ -159,6 +157,7 @@ public class Layer0B {
     try {
       // Package name, 'wizard_test', followed by class name.
       Class<?> loaded = Class.forName("wizard_test." +cName);
+//      Class<?> loaded = Class.forName(cName);
       
       WizardBase answer = (WizardBase) loaded.newInstance();
       return answer;
@@ -184,10 +183,17 @@ public class Layer0B {
       Class<?> loaded = Class.forName("wizard_test." +cName,true,loader);
       
       WizardBase answer = (WizardBase) loaded.newInstance();
+      try {
+        loader.close();
+      } catch (IOException e) {
+        // Really shouldn't happen.
+        System.err.println("Strange error: " +e.getMessage());
+        e.printStackTrace();
+      }
       return answer;
       
     } catch (MalformedURLException e) {
-      // BUG: THis one really shouldn't happen. The gerDir must be a valid
+      // BUG: This one really shouldn't happen. The gerDir must be a valid
       // directory, hence a valid URL.
       System.err.println("Malformed URL: " +Persist.getGerLocation());
     } catch (ClassNotFoundException e) {
@@ -206,19 +212,20 @@ public class Layer0B {
   private WizardBase compileAndLoad(String cName) {
     
     // Although this is called *compile* and load, compiling here should
-    // be unusual since that should have been done earlier (from the CLI).
-    // Allowing for compilation is more of a nicety in case the user forgot 
-    // (and he was fortunate enough to have error-free java code).
+    // be unusual since that should have been done earlier (by the user,
+    // from the CLI). Allowing for compilation here is more of a nicety in 
+    // case the user forgot (and he was fortunate enough to have error-free 
+    // Java code).
     // Note that WizCompile checks whether running as CLI or GUI.
     WizCompile.compile(cName);
     return classLoadable(cName);
   }
   
-  private ArrayList<Statement> expandWizard(Statement w) {
+  private ArrayList<St0B> expandWizard(StxP w) {
     
     // Convert the given wizard statement to a series of straight G-code
-    // Statements. If there's a problem, return an ArrayList consisting of
-    // a single error Statement. Or, the wizard might have some kind of 
+    // statements. If there's a problem, return an ArrayList consisting of
+    // a single error statement. Or, the wizard might have some kind of 
     // internal problem, and *it* might return a mixture of valid G-code
     // and error statements.
     DataWizard wiz = (DataWizard) w.data;
@@ -233,8 +240,8 @@ public class Layer0B {
     if (theWizard == null)
       {
         // Still null, so not a known class. Return an error Statement.
-        ArrayList<Statement> answer = new ArrayList<>(1);
-        Statement e = formError(w,"Unknown wizard: " +wiz.cmd);
+        ArrayList<St0B> answer = new ArrayList<>(1);
+        St0B e = formError(w,"Unknown wizard: " +wiz.cmd);
         answer.add(e);
         return answer;
       }
@@ -242,30 +249,47 @@ public class Layer0B {
     System.out.println("class loaded");
     
     // Got here, so the class is known and loaded. Run it.
-    return theWizard.execute(); 
+    return theWizard.execute(wiz.args); 
   }
   
-  Statement nextStatement() {
+  public static ArrayList<St0B> process(String gCode) {
     
-    // Pull off the next Statement from the buffer.
-    Statement answer = statements.first[statements.index];
-    ++statements.index;
+    // Transform the statement objects from the Layer0A to a more limited
+    // subset.
+    ArrayList<St0B> answer = new ArrayList<>();
     
-    if (statements.index >= statements.first.length)
+    Layer0B curLayer = new Layer0B(Layer0A.process(gCode));
+    
+    ArrayList<St0B> newOnes = curLayer.nextStatements();
+    
+    while (newOnes.get(0).type != St0B.EOF)
       {
-        // Refresh.
-        statements.first = statements.second;
-        statements.second = fillOneBuffer();
-        statements.index = 0;
+        for (St0B s : newOnes)
+          answer.add(s);
+        newOnes = curLayer.nextStatements();
       }
     
     return answer;
   }
 
-  void reset() {
+  public static String digestAll(String gcode) {
     
-    lowerLayer.reset();
-    this.seenOCommand = false;
-  }
+    // Take the given g-code and feed it through, producing a single String
+    // suitable for output to the user, or for use with unit tests.
+    // BUG: Isn't this method identical in every case? And the process() method
+    // is pretty close to identical too.
+    ArrayList<St0B> theStatements = process(gcode);
 
+    StringBuffer answer = new StringBuffer();
+    
+    for (St0B s : theStatements)
+      {
+        answer.append(s.toString());
+        answer.append("\n");
+      }
+    
+    return answer.toString();
+  }
+  
+  
 }

@@ -2,10 +2,8 @@ package vcnc.tpile;
 
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
-import vcnc.tpile.parse.Statement;
 import vcnc.tpile.parse.DataTLO;
-
-
+import vcnc.Statement;
 // BUG: Tool turret is a mess, with a mixture of the Java and C++ versions
 // at work.
 import vcnc.tooltable.ToolTurret;

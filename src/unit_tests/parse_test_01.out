@@ -1,5 +1,5 @@
 N00021	O00123
-SimpleWiz 4.0
+N00022	ERROR	Error on line 22: Unknown wizard: SimpleWiz
 N00031	M41
 N00033	M98 P00124 L0004
 N00036	G00

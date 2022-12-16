@@ -1,25 +1,25 @@
 package vcnc;
 
-//NEXT:
+
+
+
+
+// Get this to work well up through Layer00, including wizards.
+// Strip out (or somehow make less accessible) anything after Layer00.
 //
-// Get the wizard stuff not to use hard-coded paths specific to my machine
-// This relates to persistence too.
-// 
-//* Start with the lexer and work up to the last layer. As you reach things
-//  that need some kind of UI thing (like the tool table), write the
-//  necessary Swing.
-//
-// don't forget to update the dev manual.
-//
-// I think the lexer is good
-// 
-// parser too, although I'm sure errors will be uncovered in each of these 
-// layers as the next layer is created. 
-// 
-// 
-// Look at the "pre" layer for wizards. Rename the layers?
-// 
-//* work offsets table
+// Test (again) compiling wizards and the simple wizard I have.
+// Don't worry about anything other than G00, G01, G02, G03. Really,
+// everything should just pass through. In fact, for wizards, just do G0/01.
+
+// Test
+// * GUI conversion (layer00) DONE
+// * Compiling wizards from CLI DONE
+// * Compiling wizards on the fly DONE
+// * Translating code from CLI with wizards DONE
+// * Translating code from GUI with wizards DONE
+// * Persistent data DONE
+// * Do G20/21 work? NOT RELEVANT.
+// * Use jar file. DONE
 
 
 
@@ -55,7 +55,12 @@ Now type
 
 jar cvmf manifest ger.jar vcnc
 
-and you get the jar file in the bin directory.
+and you get the jar file in the bin directory. In fact, I find this easier
+than using Eclipse. 
+
+To run, say
+
+java -jar ger.jar
 
 
 
@@ -206,10 +211,73 @@ v08
 Clean up some of the mess in Layer0B now that the essence is there. A bunch
 of tests related to run-time compilation were removed.
 
-Create a jar and a CLI. Compiling wizards is most easily done (for me, as the
-developer, and for the user) with a CLI. While I'm at it, letting the user
-translate G-code via the CLI is an easy thing, as is running the unit tests.
-See Main.isGui() below.
+Created a jar and there is now CLI access. Compiling wizards is most easily 
+done (for me, as the developer, and for the user) with a CLI. While I'm at it,
+letting the user translate G-code via the CLI is an easy thing, as is running 
+the unit tests. See Main.handleCLI() below.
+
+I confused myself with regard to complications introduced by the expansion
+of wizards. There's nothing in the code about this issue -- other than a 
+comment at the head of Layer00 -- but I wasted some time.
+
+Made some modest changes to Parser and Layer00 to make the tracking of
+sub-program calls clearer.
+
+I sort of abandoned this version to reorganize the code. Instead of having
+each layer feed up to the next one statement at a time, have them process
+the entire set of statements, then pass all of those statements up to
+the next layer in one lump.
+
+So, what's in here is a mess and won't compile or work properly.
+
+v09
+
+The goal is now for each layer to consume the *entire* output of the previous
+layer, process it, and pass the result of its transformation applied to the
+entire program to the next layer. This is hoggish of memory, but certain
+difficulties should go away, particularly how sub-programs and wizards are
+managed. It should also reduce some of the plumbing that links the layers.
+
+This feels (and is) hoggish, but it should be fine. The feed rate is likely
+to average something like 10 IPM (inches per minute). If each line moves the
+tool 0.050 inches, then 100,000 lines are a total "path traveled" of 5,000
+inches. At 10 IPM, that's 500 minutes, which is a long time for a program
+to run. This is a crude estimate, but it's the right order of magnitude.
+A program of 100,000 lines is something like 4 megabytes. There's plenty
+of memory.
+
+This change requires an extensive refactoring, from the Lexer on up.
+
+I've started the refactoring in this version, but it's a mess. It's
+sort of (but not really) refactored up through Layer00.
+
+v10
+
+Clean up the junk left over from refactoring Lexer, Parser, Layer0A, Layer0B
+and Layer00: commented out junk, useless classes, etc. Lots of stuff was
+removed. The refactoring through Layer00 should be complete, though not
+tested.
+
+I also began changing from the use of a single Statement class throughout
+the series of layers to a set of different classes of statement, where these
+different kinds of statement become more limited as the layers proceed. This 
+has value in that it uses the compiler and type-checking to ensure that things 
+are being done correctly, and it documents in a clearer way which G-codes are 
+in play at any given stage. This involved many small edits, but no major 
+conceptual change.
+
+Some changes to the way wizards are to be specified by the user. They can
+now be expressed somewhat more briefly (less typing) at modest cost in the
+internal complexity of the wizard framework (invisible to the user).
+
+Plus...much fiddling to get things into a more usable form...basically, 
+resolving many small errors (or not so small).
+
+
+
+
+
+ 
 
 
 
@@ -217,8 +285,8 @@ See Main.isGui() below.
 
 
 
-
-
+ 
+ 
  
 
 
@@ -244,15 +312,6 @@ Looking at the comments for main.cpp in the C++/Qt version, I am up to
 about v05.
 
 
-DOWN THE ROAD
-
-*** It is tempting to use a MetaPost-like language to specify bezier curves.
-I wrote a parser and interpreter for that once, and it could be brought over.
-So, have a wizard that takes a single string as argument like
-Bezier "(x1,y1)..(x2,y2)"
-
-*** 
-
 
 
 
@@ -263,23 +322,29 @@ Bezier "(x1,y1)..(x2,y2)"
 TODO:
 
 * When the last window is closed (x icon), the entire program should quit.
-  
-* Change the way the parser works a bit. Certain codes should just pass
-  through.
-  
-* Problem when you close tabs (or entire windows). They somehow seem to
-  remain on "the list."
 
+* The way in which the tabs of code/translations are managed is far from
+  ideal. The GInputTab objects point to the possible translations of the 
+  output -- which is what I want. The problem is that when tabs are closed,
+  the data associated with that tab doesn't disappear. I've found a sort of
+  workaround, but it's nasty. What you want is a data structure representing
+  these associations that is not directly tied to what's happening in the
+  Swing UI.
+    
+* Currently, the output text includes the original line numbers as an
+  N-code. There's value to that when debugging so that you can see the 
+  original line that led to what you're looking at, but it will usually
+  be unnecessary and could confuse the target machine. Add a way to turn
+  that off and on.
+  
 * What about text size and fonts in general?
 
 * Track file dirty
 
-* How to report errors?
-  Maybe assume that if a layer completes, then there were no errors
-  in that layer. So, we do the lexer. If any errors arise at any point, then
-  halt the entire thing, print out the error message and go to the relevant
-  line.
-
+* It is tempting to use a MetaPost-like language to specify bezier curves.
+  I wrote a parser and interpreter for that once, and it could be brought over.
+  So, have a wizard that takes a single string as argument like
+  Bezier "(x1,y1)..(x2,y2)"
 
 */
 
@@ -295,7 +360,9 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import vcnc.persist.Persist;
+import vcnc.tpile.Translator;
 import vcnc.unittest.UnitTests;
+import vcnc.util.FileIOUtil;
 
 
 public class Main {
@@ -313,6 +380,9 @@ public class Main {
     // Create and set up the window.
   	MainWindow mainWindow = new MainWindow();
   	
+  	
+  	
+  	/*
   	// BUG: Testing
   	MainWindow other = mainWindow.doNewWindow();
   	
@@ -325,7 +395,7 @@ public class Main {
     other.doOpen(dir,"layer03.txt");
     other.doOpen(dir,"layer04.txt");
     other.doOpen(dir,"layer05.txt");
-  	
+  	*/
   }
 	
   public static void guiMain() {
@@ -369,15 +439,15 @@ public class Main {
       });
   }
 
-  public static void testMain() {
+  public static void testMain(String path) {
     
     // To run the units tests.
     // You can run any or all of these, and the test of each layer may
     // consist of several individual tests.
     System.out.println("Running unit tests...");
     
-    UnitTests.testLexer();
-//    UnitTests.testParser();
+    UnitTests.setDir(path);
+    UnitTests.testAll();
     
     System.out.println("Unit tests complete.");
     
@@ -388,12 +458,13 @@ public class Main {
     // Parse any arguments and act accordingly. If there are no arguments or
     // the only argument is 'gui', then return true immediately. Otherwise,
     // parse the arguments, act accordingly and return false.
-    //
+    // 
     // The permitted arguments are
     // * 'gui' (or no arguments) to launch as a GUI program.
-    // * 'test' to run a suite of tests.
+    // * 'test' to run a suite of tests, with the path.
     // * 'change' to switch to a different .ger directory. Provide the
-    //   path to the desired .ger directory.
+    //   path to the desired .ger directory. If not path is provided, it
+    //   will report the current path.
     // * 'translate' to run a single input g-code file and send the
     //   output to stdout.
     // * 'compile' takes a wizard name. The associated .java file must be in 
@@ -411,14 +482,24 @@ public class Main {
     Main.asCLI = true;
     
     
-    if ((args.length == 1) && (args[0].equals("test")))
+    if ((args.length == 2) && (args[0].equals("test")))
       {
-        testMain();
+        // Run unit tests. First, where are they?
+        File f = new File(args[1]);
+        
+        if (f.exists() == false)
+          System.err.println("No such directory.");
+        else if (f.isDirectory() == false)
+          System.err.println("That is not a directory.");
+        else
+          testMain(f.getAbsolutePath());
+        
         return false;
       }
     
     if ((args.length == 2) && (args[0].equals("change")))
       {
+        // Change the .ger directory.
         File f = new File(args[1]);
         
         if (f.exists() == false)
@@ -430,6 +511,14 @@ public class Main {
             System.out.println("Changed to " +f.getAbsolutePath());
             Persist.setGerLocation(f.getAbsolutePath());
           }
+        
+        return false;
+      }
+    
+    if ((args.length == 1) && (args[0].equals("change")))
+      {
+        // Report the current path to the .ger directory.
+        System.out.println(Persist.getGerLocation());
         
         return false;
       }
@@ -449,10 +538,21 @@ public class Main {
             return false;
           }
         
-        // BUG: Implement this, but it doesn't make sense until all the layers
-        // have been debugged. Also, running only a few layers through the CLI
-        // doesn't make sense either (as tempting as that is to implement).
-        System.out.println("not implemented");
+        // BUG: Implemented only up to a particular layer (as far as has
+        // been debugged).
+        
+        // BUG: Annoying exception to be eliminated?
+        try {
+          
+        String inCode = FileIOUtil.loadFileToString(".",args[1]);
+        String outCode = Translator.digestAll(inCode,Translator.ToL00);
+        System.out.println(outCode);
+        
+        } catch (Exception e) {
+          System.err.println("Problem: " +e.getMessage());
+        }
+        
+        
         
         return false;
       }
@@ -479,7 +579,7 @@ public class Main {
 //    WizCompile.compile("SimpleWiz2");
     
 
-    System.exit(0);
+//    System.exit(0);
 //    guiMain();
     
 //    testMain();

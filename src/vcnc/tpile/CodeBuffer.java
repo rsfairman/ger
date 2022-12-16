@@ -2,6 +2,9 @@ package vcnc.tpile;
 
 /*
 
+BUG: This might no longer serve any purpose...
+
+
 Use this to create a buffered interface to a String. The built-in StringBuffer 
 class sounds like the thing to use, making this redundant, but StringBuffer
 has a *mutable* sequence of characters. The built-in StringReader class is 
@@ -18,6 +21,7 @@ and how charAt() is implemented. Realistically, this shouldn't make a big
 difference either way, so go with the shorter/simpler code. 
 
 */
+
 
 public class CodeBuffer {
   

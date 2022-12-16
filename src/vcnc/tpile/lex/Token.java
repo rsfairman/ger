@@ -3,10 +3,10 @@ package vcnc.tpile.lex;
 /*
 
 To represent a single "token" of some G-code. E.g., G40, G00, O1245, S4800, etc.
-These are created by the Lexer and will typically end up in a TokenBuffer.
 
 There are a couple of tokens that are used internally, and are not letters:
 * means EOF. Need this to indicate that the lexer ran off the end of the file.
+  It shouldn't appear in the output of the lexer.
 ; line-feed. These often appear in the code, but many times they are redundant.
   It is used here when it's needed, like after a move. I haven't been super 
   careful about eliminating them when they are redundant, so the parser may see
@@ -25,6 +25,8 @@ and strings. The function call is terminated by new-line or semicolon.
 Note that, for G/M-codes that are unknown to the system, the lexer assumes
 that they follow the usual form. That is, after the initial G/M-whatever,
 there will be a series of letter/number pairs.
+
+
 BUG: G/M codes "unknown to the system" are now treated as errors. At least
 I think that's what we'll settle on. 
  
@@ -90,10 +92,13 @@ public class Token {
   // character at which a token occurs. This is the character count from the 
   // 0-th character of the source code at which the first character of the 
   // given token occurs.
+  // BUG: Can I get rid of this? No longer serves any purpose?
   public int characterCount = -1;
   
   // This points to the first character AFTER the characters that make up the 
   // current token. This is needed so that we can return from subroutines.
+
+  // BUG: Can I get rid of this? No longer serves any purpose?
   public int endCount = -1;
   
   public Token(char c,int lineNumber) {

@@ -2,15 +2,15 @@ package vcnc.tpile;
 
 /*
 
-This acts on certain "machine directives" that must appear before the 
-O-statement. These are for things like setting the billet dimensions or 
-changing the work offsets table or tool table in way that is independent of 
-the persistent machine setup.  
+This comes immediately after the Parser and acts on certain "machine 
+directives" that must appear before the O-code. These are for things like 
+setting the billet dimensions or changing the work offsets table or tool 
+table in way that is independent of the persistent machine setup.  
 
 To the user, syntactically, these are a lot like wizards, and they come
 in that way from the parser. In essence, any "wizard" that occurs before
-the O-statement must be one of these directives, and any "wizard" that
-comes after the O-statement is a wizard in the usual sense.
+the O-code must be one of these directives, and any "wizard" that comes after 
+the O-code is a wizard in the usual sense.
 
 
 BUG: None of these directives are actually handled, though "Billet"
@@ -19,24 +19,37 @@ for "SetUnits." Actually, maybe SetUnits is done (at least for now).
 
 */
 
+import java.util.ArrayList;
+
 import vcnc.tpile.parse.Parser;
-import vcnc.tpile.parse.Statement;
 import vcnc.tpile.parse.DataWizard;
 
 
 public class Layer0A {
   
-  // The source of incoming Statement objects.
-  private Parser theParser = null;
+  // The statement objects from the lower layer, and the mark of where we
+  // are in processing them.
+  private ArrayList<StxP> theStatements = null;
+  private int statementIndex = 0;
   
-  // Whether we've read up to the first O-statement. At that point, this
-  // thing is essentially done; from then on, it merely passes along what the
-  // parser produces.
+  // Whether we've read up to the first O-statement. Used primarily for
+  // error checking.
   private boolean pastO = false;
   
   
-  Layer0A(CodeBuffer theText) {
-    this.theParser = new Parser(theText);
+  private Layer0A(ArrayList<StxP> smnts) {
+    this.theStatements = smnts;
+    this.statementIndex = 0;
+  }
+  
+  private StxP getLower() {
+    
+    if (statementIndex >= theStatements.size())
+      return new StxP(StxP.EOF);
+    
+    StxP answer = theStatements.get(statementIndex);
+    ++statementIndex;
+    return answer;
   }
   
   private String formError(int lineNumber,String msg) {
@@ -44,22 +57,24 @@ public class Layer0A {
     return "Error on line " +lineNumber+ ": " +msg;
   }
   
-  private Statement formError(Statement s,String msg) {
+  private StxP formError(StxP s,String msg) {
     
     // BUG: This is a much better way to do things.
     // See I can get rid of the "other" formError() in all classes that do this.
-    Statement answer = new Statement(Statement.ERROR);
+    StxP answer = new StxP(StxP.ERROR);
     answer.lineNumber = s.lineNumber;
     answer.charNumber = s.charNumber;
     answer.error = formError(s.lineNumber,msg);
     return answer;
   }
   
-  private Statement handleDirective(Statement wizard) {
+  private StxP handleDirective(StxP wizard) {
     
-    // The given Statement is know to be a wizard. Either:
-    // * Act on it and return null (null since the Statement was consumed)
-    // * Determine that there's an error and return an error Statement
+    // The given statement is known to be a wizard. Either: 
+    // * Act on it and return null (null since the statement was consumed)
+    // * Determine that there's an error and return an error statement.
+    //   Using genuine wizards (not machine directives) before the O-code is
+    //   such an error.
     DataWizard wizData = (DataWizard) wizard.data;
     
     // Remember, this only accepts "machine directives," not genuine wizards.
@@ -105,27 +120,27 @@ public class Layer0A {
     return null;
   }
   
-  Statement nextStatement() {
+  private StxP nextStatement() {
     
-    Statement answer = theParser.getStatement();
+    StxP answer = getLower();
     
     if (this.pastO == true)
-      // We're past anything this class handles. Just pass the Statement up
+      // We're past anything this class handles. Just pass the statement up
       // to the next layer.
       return answer;
     
-    if (answer.type == Statement.PROG)
+    if (answer.type == StxP.PROG)
       {
         // Hit the O-statement.
         this.pastO = true;
         return answer;
       }
     
-    if (answer.type != Statement.WIZARD)
-      // Just a plain old Statement, not a wizard directive. Pass it along.
+    if (answer.type != StxP.WIZARD)
+      // Just a plain old statement, not a wizard directive. Pass it along.
       return answer;
     
-    // Got here, so the Statement is a wizard, hopefully a "machine directive."
+    // Got here, so the statement is a wizard, hopefully a "machine directive."
     answer = handleDirective(answer);
     
     if (answer != null)
@@ -138,9 +153,42 @@ public class Layer0A {
     return nextStatement();
   }
 
-  public void reset() {
-    theParser.reset();
-    this.pastO = false;
+  public static ArrayList<StxP> process(String gCode) {
+    
+    // Transform the Statement objects from the Parser to a more limited
+    // subset.
+    ArrayList<StxP> answer = new ArrayList<>();
+    
+    Layer0A curLayer = new Layer0A(Parser.process(gCode));
+    
+    StxP s = curLayer.nextStatement();
+    
+    while (s.type != StxP.EOF)
+      {
+        answer.add(s);
+        s = curLayer.nextStatement();
+      }
+    
+    return answer;
+  }
+
+  public static String digestAll(String gcode) {
+    
+    // Take the given g-code and feed it through, producing a single String
+    // suitable for output to the user, or for use with unit tests.
+    // BUG: Isn't this method identical in every case? And the process() method
+    // is pretty close to identical too.
+    ArrayList<StxP> theStatements = process(gcode);
+
+    StringBuffer answer = new StringBuffer();
+    
+    for (StxP s : theStatements)
+      {
+        answer.append(s.toString());
+        answer.append("\n");
+      }
+    
+    return answer.toString();
   }
   
 }

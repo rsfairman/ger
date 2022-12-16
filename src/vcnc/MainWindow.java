@@ -3,7 +3,8 @@ package vcnc;
 /*
 
 This controls everything and is kicked off by the Main class. Effectively,
-the main() for the entire program is this class's constructor.
+the main() for the entire program is this class's constructor if being
+run as a GUI.
 
 */
 
@@ -38,7 +39,7 @@ import java.io.File;
 
 import vcnc.ui.TabMgmt.GInputTab;
 import vcnc.ui.TabMgmt.LexerTab;
-import vcnc.ui.TabMgmt.ParserTab;
+import vcnc.ui.TabMgmt.OutputTextTab;
 import vcnc.ui.TabMgmt.StaticWindow;
 import vcnc.ui.TabMgmt.TabbedType;
 import vcnc.ui.TabMgmt.TypedDisplayItem;
@@ -169,9 +170,12 @@ public class MainWindow extends JFrame
     // BUG: Fix so that the tab's name changes when the file name changes.
   }
   
-  
   private void doTestLexer() {
   	
+    // BUG: This is almost the same as doSimplify(), and maybe should be
+    // combined with it. The only major difference is the type associated
+    // with the resulting tab.
+    // 
     // BUG: Should reset the MachineState to whatever is from the .ger
     // preferences directory.
     
@@ -180,6 +184,7 @@ public class MainWindow extends JFrame
     // users will care about this. OTOH, it might help them to understand
     // why their program fails and debug the problem, just like the output 
     // of the other layers.
+    
     
     int curTabIndex = theTabs.getSelectedIndex();
     if (curTabIndex < 0)
@@ -361,30 +366,29 @@ public class MainWindow extends JFrame
   private void doSimplify(int layer) throws OutOfMemoryError {
 
     // BUG: Should reset the MachineState to whatever is from the .ger
-    // preferences directory.
+    // preferences directory. Individual G-code scripts can reset certain
+    // "global" things like the tool table on a per-script basis, so this
+    // *does* need to be reloaded.
+    // 
+    // BUG: But that won't be enough. Also need to reset things like the
+    // tool position to (0,0,0). 
     
   	// Run some number of layers of the transpiler. The given layer is where 
-    // to stop the translation. layer == -1 means to take the output of the 
-    // Parser, layer == -2 means to run the wizard converter, layer == 0 means 
-    // to use the output of Layer00, etc., to the final layer.
-    //
-    // BUG: For historical reasons, the numbers are messed up.
-    // Do Lexer, then Parser, then LayerPre, then Layer00, etc.
-    // BUG: Rename so that LayerPre becomes Layer00, and then bump up the
-    // other layer numbers. This will require editing comments.
-    // Maybe better to name the layers somehow: LayerWiz, LayerUnits, etc.,
-    // but then it's not so obvious in what order they are invoked.
+    // to stop the translation. Translator defines certain values to be used
+    // as the layer count: Translator.ToL00, etc.
+    
   	
     // Look at the top-most tab, but only use it if it's input G-code.
     int curTabIndex = theTabs.getSelectedIndex();
     if (curTabIndex < 0)
-        // No tabs exist.
+        // No tabs exist, so there's nothing to translate.
         return;
 
     Component curTabComponent = theTabs.getComponentAt(curTabIndex);
     TypedDisplayItem curTabTyped = (TypedDisplayItem) curTabComponent;
     if (curTabTyped.type() != TabbedType.G_INPUT)
       // Only makes sense for input G-code.
+      // BUG: Error message? Gray out the menu choice?
       return;
     
     GInputTab gCodeTab = (GInputTab) curTabComponent;
@@ -394,19 +398,115 @@ public class MainWindow extends JFrame
   	try {
   	  String fullyDigested = 
   	      Translator.digestAll(gCodeTab.getTextArea().getText(),layer);
-
-      if (gCodeTab.parseOut != null)
+  	  
+  	  // There could be numerous tabs open for the various forms of partially
+  	  // translated output of this G-code.
+  	  
+  	  // BUG: This will need to be completed for the additional layers.
+  	  // BUG: And the lexer could be done here too, I think.
+  	  // BUG: Can these cases (which are almost identical) be combined?
+  	  // Put somewhere else? Hideous.
+  	  if (layer == Translator.ToLxP)
+  	    {
+  	      if (gCodeTab.parseOut != null)
+  	        {
+  	          OutputTextTab parseOutput = gCodeTab.parseOut;
+  	          parseOutput.theText.setText(fullyDigested);
+  	          
+  	          // This particular tab may have been closed in the GUI (with the
+  	          // x-icon in the tab), but that doesn't remove it from memory.
+  	          // If it's not visible, make it so.
+  	          // 
+  	          // BUG: When tabs are closed this way, they *should* be removed
+  	          // from memory, but that's not easy due to the way tabs are
+  	          // managed. The code to handle the x-icon as a button is buried
+  	          // too deeply.
+  	          int test = theTabs.indexOfComponent(gCodeTab.parseOut);
+  	          if (test < 0)
+  	            // Make the tab visible again.
+  	            theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",
+                    parseOutput);
+  	        }
+  	      else
+  	        {
+  	          OutputTextTab parseOutput = new OutputTextTab(
+  	              TabbedType.PARSER_OUT,fullyDigested,gCodeTab);
+  	          theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",
+  	              parseOutput);
+  	          gCodeTab.parseOut = parseOutput;
+  	        }
+  	    }
+      else if (layer == Translator.ToL0A)
         {
-          ParserTab parseOutput = gCodeTab.parseOut;
-          parseOutput.theText.setText(fullyDigested);
+          if (gCodeTab.layer0AOut != null)
+            {
+              OutputTextTab layer0AOutput = gCodeTab.layer0AOut;
+              layer0AOutput.theText.setText(fullyDigested);
+              
+              int test = theTabs.indexOfComponent(gCodeTab.layer0AOut);
+              if (test < 0)
+                // Make the tab visible again.
+                theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0A",
+                    layer0AOutput);
+            }
+          else
+            {
+              OutputTextTab layer0AOutput = new OutputTextTab(
+                  TabbedType.LAYER0A_OUT,fullyDigested,gCodeTab);
+              theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0A",
+                  layer0AOutput);
+              gCodeTab.layer0AOut = layer0AOutput;
+            }
+        }
+      else if (layer == Translator.ToL0B)
+        {
+          if (gCodeTab.layer0BOut != null)
+            {
+              OutputTextTab layer0BOutput = gCodeTab.layer0BOut;
+              layer0BOutput.theText.setText(fullyDigested);
+              
+              int test = theTabs.indexOfComponent(gCodeTab.layer0BOut);
+              if (test < 0)
+                // Make the tab visible again.
+                theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0B",
+                    layer0BOutput);
+            }
+          else
+            {
+              OutputTextTab layer0BOutput = new OutputTextTab(
+                  TabbedType.LAYER0B_OUT,fullyDigested,gCodeTab);
+              theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0B",
+                  layer0BOutput);
+              gCodeTab.layer0BOut = layer0BOutput;
+            }
+        }
+      else if (layer == Translator.ToL00)
+        {
+          if (gCodeTab.layer00Out != null)
+            {
+              OutputTextTab layer00Output = gCodeTab.layer00Out;
+              layer00Output.theText.setText(fullyDigested);
+              
+              int test = theTabs.indexOfComponent(gCodeTab.layer00Out);
+              if (test < 0)
+                // Make the tab visible again.
+                theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer00",
+                    layer00Output);
+            }
+          else
+            {
+              OutputTextTab layer00Output = new OutputTextTab(
+                  TabbedType.LAYER00_OUT,fullyDigested,gCodeTab);
+              theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer00",
+                  layer00Output);
+              gCodeTab.layer00Out = layer00Output;
+            }
         }
       else
-        {
-          ParserTab parseOutput = new ParserTab(fullyDigested,gCodeTab);
-          theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",parseOutput);
-          gCodeTab.parseOut = parseOutput;
-        }
-    
+        System.err.println("Fell through adding tab of unknown type");
+  	  
+  	  
+  	
   	} catch (Exception e) {
       JOptionPane.showMessageDialog(this,e.getMessage());
       return;
@@ -934,7 +1034,10 @@ public class MainWindow extends JFrame
   
     // Provided that the from tab of the window has G-code (the TabbedType
     // is G_INPUT), toggle display of the line numbers.
-
+    
+    // BUG: This only works for input G-code (as intended), and it should
+    // be grayed out or something for other types of tab.
+    
     int curTabIndex = theTabs.getSelectedIndex();
     if (curTabIndex < 0)
         // No tabs exist.
@@ -993,7 +1096,7 @@ public class MainWindow extends JFrame
   private void doGetVersion() throws OutOfMemoryError {
 
     JOptionPane.showMessageDialog(this,
-        "This is version 0.03 of November 20, 2022.");
+        "This is version 0.010 of December 14, 2022.");
 		
   }
   
@@ -1014,21 +1117,23 @@ public class MainWindow extends JFrame
 	  	else if (e.getActionCommand().equals("Test Lexer"))
 	      doTestLexer();
       else if (e.getActionCommand().equals("Test Parser"))
-        doSimplify(-1);
+        doSimplify(Translator.ToLxP);
+      else if (e.getActionCommand().equals("Test Directives"))
+        doSimplify(Translator.ToL0A);
       else if (e.getActionCommand().equals("Test Wizards"))
-        doSimplify(-2);
+        doSimplify(Translator.ToL0B);
 	  	else if (e.getActionCommand().equals("Simplify 00"))
-	      doSimplify(0);
+	      doSimplify(Translator.ToL00);
 	  	else if (e.getActionCommand().equals("Simplify 01"))
-	      doSimplify(1);
+	      doSimplify(Translator.ToL01);
 	  	else if (e.getActionCommand().equals("Simplify 02"))
-	      doSimplify(2);
+	      doSimplify(Translator.ToL02);
 	  	else if (e.getActionCommand().equals("Simplify 03"))
-	      doSimplify(3);
+	      doSimplify(Translator.ToL03);
 	  	else if (e.getActionCommand().equals("Simplify 04"))
-	      doSimplify(4);
+	      doSimplify(Translator.ToL04);
 	  	else if (e.getActionCommand().equals("Simplify 05"))
-	      doSimplify(5);
+	      doSimplify(Translator.ToL05);
 //    else if (e.getActionCommand().equals("Test Pulses"))
 //    doTestPulses();
 //  else if (e.getActionCommand().equals("Test Voxel Frame"))
@@ -1082,13 +1187,14 @@ public class MainWindow extends JFrame
     theMenu = new Menu("Test",false);
     theMenu.add(new MenuItem("Test Lexer",new MenuShortcut(KeyEvent.VK_L,false)));
     theMenu.add(new MenuItem("Test Parser",new MenuShortcut(KeyEvent.VK_P,false)));
+    theMenu.add(new MenuItem("Test Directives",new MenuShortcut(KeyEvent.VK_D,false)));
     theMenu.add(new MenuItem("Test Wizards",new MenuShortcut(KeyEvent.VK_W,false)));
     theMenu.add(new MenuItem("Simplify 00"));
-    theMenu.add(new MenuItem("Simplify 01"));
-    theMenu.add(new MenuItem("Simplify 02"));
-    theMenu.add(new MenuItem("Simplify 03"));
-    theMenu.add(new MenuItem("Simplify 04"));
-    theMenu.add(new MenuItem("Simplify 05"));
+//    theMenu.add(new MenuItem("Simplify 01"));
+//    theMenu.add(new MenuItem("Simplify 02"));
+//    theMenu.add(new MenuItem("Simplify 03"));
+//    theMenu.add(new MenuItem("Simplify 04"));
+//    theMenu.add(new MenuItem("Simplify 05"));
 //    theMenu.add(new MenuItem("Test Pulses"));
 //    theMenu.add(new MenuItem("Test Voxel Frame"));
     theMenu.addActionListener(this);

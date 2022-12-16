@@ -9,7 +9,7 @@ To test on the fly compilation
 
 import java.util.ArrayList;
 
-import vcnc.tpile.parse.Statement;
+//import vcnc.tpile.parse.Statement;
 import vcnc.wizard.WizardBase;
 
 
@@ -20,16 +20,18 @@ public class SimpleWiz2 extends WizardBase {
     System.out.println("inside wizard constructor");
   }
   
-  public ArrayList<Statement> execute() {
+  public void definition(ArrayList<Object> args) {
     
     System.out.println("inside wizard2");
     
-    ArrayList<Statement> answer = new ArrayList<>();
+
     
-    answer.add(G01());
-    answer.add(Move().X(1.0).F(10.0).close());
+    G01();
+    Move().X(3.0).F(40.0);
+    
+    G00();
+    Move().Y(2.0).Z(5.0);
     
     
-    return answer;
   }
 }

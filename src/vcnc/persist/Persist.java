@@ -9,6 +9,14 @@ definitions.
 BUG: Currently in its own package. Maybe it should just go into the vcnc 
 package. Will there be other classes?
 
+BUG: (or not?) When you choose another directory for the machine settings,
+you can choose *any* directory. It doesn't create a new '.ger' directory;
+it uses whatever you choose. 
+
+BUG: Maybe there should be a "go back to the default machine" choice.
+
+
+
 The data that persists is:
 
 * Inch/mm choice. This is mostly important for the tool table and the
@@ -64,6 +72,7 @@ import java.io.File;
 import java.nio.file.Path;
 
 import java.util.prefs.Preferences;
+import java.util.prefs.BackingStoreException;
 
 import java.net.URL;
 import java.net.MalformedURLException;
@@ -140,6 +149,13 @@ public class Persist {
     
     Preferences p = Preferences.userRoot();
     p.put(theKey,norm);
+    gerDir = path;
+    try {
+      p.flush();
+    } catch (BackingStoreException e) {
+      // BUG: Could this really happen? Message dialog instead?
+      System.err.println("Could not persistently save machine settings location.");
+    }
   }
   
   public static String getGerLocation() {
@@ -181,7 +197,7 @@ public class Persist {
     else
       {
         // Maybe the user tried to edit the file himself and made a mistake.
-        JOptionPane.showMessageDialog(null,"Units read as " +s+ ".\n" +
+        JOptionPane.showMessageDialog(null,"When loading setup, units read as '" +s+ "'.\n" +
           "That doesn't make sense; 'inch' or 'mm' expected.\n" +
           "Did you edit the file directly?\n" +
           "Defaulting to inches.");
@@ -193,6 +209,18 @@ public class Persist {
     
   }
   
+  private static void saveInch() {
+    
+    // Reverse of loadInch().
+    String theText = null;
+    if (MachineState.machineInchUnits == true)
+      theText = "inch";
+    else
+      theText = "mm";
+    
+    FileIOUtil.saveStringAsAscii(gerDir,inchName,theText);
+  }
+  
   private static void loadSettings() {
     
     // Load the various settings to the MachineState. This needs to be called
@@ -202,6 +230,8 @@ public class Persist {
   }
   
   public static void reload() {
+    
+    // Call this to reset the machine to whatever is stored on the disk.
     
     // Won't work as of Java 9.
 //    try {
@@ -220,7 +250,22 @@ public class Persist {
     
     loadSettings();
     
-    System.out.println("current .ger directory: " +gerDir);
+//    System.out.println("current .ger directory: " +gerDir);
+  }
+  
+  public static void save() {
+    
+    // Save the persistent aspects of the MachineState. Everything in 
+    // MachineState is static, so no argument (which is not ideal).
+    
+    // BUG: The only thing being saved at this point is the inch/mm choice.
+    
+    saveInch();
+    
+    
+    
+    
+    
   }
   
   

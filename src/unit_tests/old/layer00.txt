@@ -19,7 +19,7 @@ SimpleWiz 4
 )
 
 O123
-SimpleWiz 4
+SimpleWiz2 4
 (M30) (what happens if the program immediately halts?)
 
 (Some bad G-codes)

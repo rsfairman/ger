@@ -134,7 +134,8 @@ public class TabbedPaneDnD extends JTabbedPane {
         this, DnDConstants.ACTION_COPY_OR_MOVE, new TabDragGestureListener());
   }
   
-  @Override public void addTab(String title,Component component) {
+  //public void addTab(String title,Component component,TabCloser closer) {
+  public void addTab(String title,Component component) {
     
     // Like a normal addTab(), but with a close box.
     super.addTab(title,component);
@@ -143,7 +144,7 @@ public class TabbedPaneDnD extends JTabbedPane {
     // the *index*.
     int addedIndex = this.getTabCount() - 1;
     
-    this.setTabComponentAt(addedIndex, new ButtonTabComponent(this));
+    this.setTabComponentAt(addedIndex,new ButtonTabComponent(this));
   }
   
   public void setNotDragging() {
