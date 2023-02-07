@@ -1,12 +1,16 @@
 package vcnc.tpile;
 
-import vcnc.Statement;
+//import vcnc.Statement;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
 
 
 public class Layer04 {
   
+  
+  /*
+
+
   private Layer03 lowerLayer = null;
 
 
@@ -225,7 +229,9 @@ public class Layer04 {
     
     lowerLayer.reset();
   }
-
+*/
+  
+  
 }
 
 

@@ -20,4 +20,13 @@ public class DataSubroutineCall extends StatementData {
 	
 	// And the line number to which a subroutine call should return.
 //	public int returnLine = -1;
+	
+	public DataSubroutineCall deepCopy() {
+	  
+	  DataSubroutineCall answer = new DataSubroutineCall();
+	  answer.programNumber = this.programNumber;
+	  answer.invocations = this.invocations;
+	  answer.returnChar = this.returnChar;
+	  return answer;
+	}
 }

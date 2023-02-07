@@ -1,0 +1,25 @@
+
+(
+Test basics of calling subprogram.
+This one fails since the P value doesn't appear in the M98.
+)
+
+O123
+
+G01 
+G00
+
+M98 L3
+M30
+
+O1
+G02
+G03
+M99
+
+(None of what follows should appear in the output)
+
+M30
+
+G15
+G16

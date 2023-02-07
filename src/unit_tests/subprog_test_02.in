@@ -1,0 +1,25 @@
+
+(
+Test basics of calling subprogram.
+
+)
+
+O123
+
+G01 
+G00
+
+M98 P1 L3
+M30
+
+O1
+G41 H10
+M03 S1000
+M99
+
+(None of what follows should appear in the output)
+
+M30
+
+G15
+G16

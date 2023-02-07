@@ -1,0 +1,25 @@
+(
+
+Ensure that reusing O-codes generates an error.
+
+)
+
+O123
+M98 P124 L4 (should fail here too, but the O reused is caught first)
+
+G00
+X1 Y1
+M30
+G01 X1 Y1 F17
+X2 Y3
+
+O125
+M06 T12
+X1 Z1
+M99
+
+O125 ( Reuse: should be an error )
+G00 X0 Y0
+X1 Y1
+M99
+

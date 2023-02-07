@@ -1,8 +1,20 @@
 package vcnc.tpile;
 
-/*
+/* 
 
-Certain "Global" settings for the machine. Some of these are more fixed, like
+The default settings for the machine.
+
+
+
+
+BUG: Refactoring. Certain aspects of this change as the program runs,
+but this should be totally immutable since it's the *default* for the
+machine -- the state before any program runs. Changable state is now
+handled within the Translator class.
+
+
+
+Some of these are more fixed, like
 the work offsets table, and some change, like whether in absolute or 
 incremental mode. Also, some of these settings are only relevant to certain
 layers. For example, at some point (Layer01?), all units that appear in
@@ -16,6 +28,10 @@ stage), but it's easier to hold them all here.
 
 BUG: That said, maybe some of these *should* be taken out of here. Think 
 through how each variable is used.
+
+BUG: Maybe the dynamic settings (whether in inch/mm, etc.) should go in
+the Translator class, and this should only be things that are part of the
+"fixed" machine.
 
 */
 
@@ -33,19 +49,24 @@ public class MachineState {
   public static WorkOffsets workOffsets = new WorkOffsets();
   
   // Whether the machine works internally with inches (true) or mm (false).
+  // BUG: Change this name not to use 'machine'. That is understood since
+  // it's part of this class.
+  // BUG: In fact, this class should not be called Machine*State*. It's not
+  // the state of the machine -- or it's the state in a limited sense. It is
+  // the default settings for the machine, like when it is first "turned on."
   public static boolean machineInchUnits = true;
   
   // BUG: In the original code there's also a concept of 'scale'. I might
   // need that at some point, particularly when rendering.
   
   // Whether the machine is *currently* working in inches (true) or mm (false).
-  public static boolean curInch = true;
+//  public static boolean curInch = true;
   
   // Whether currently in polar coordinates mode (G15/16).
-  public static boolean usingPolar = false;
+//  public static boolean usingPolar = false;
   
   // Which plane is current with G17/18/19.
-  public static AxisChoice curAxis = AxisChoice.XY;
+//  public static AxisChoice curAxis = AxisChoice.XY;
 
   // Whether currently in absolute mode (true) or incremental mode (false).
   public static boolean absolute = true;

@@ -37,4 +37,12 @@ public class DataRegister extends StatementData {
     
     return answer;
   }
+  
+  public DataRegister deepCopy() {
+    
+    DataRegister answer = new DataRegister();
+    answer.D = this.D;
+    answer.regValue = this.regValue;
+    return answer;
+  }
 }

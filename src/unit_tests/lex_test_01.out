@@ -1,74 +1,57 @@
-2	;
-3	;
-4	;
+3	error	Lexical error on line 3: use of '(' inside comments not allowed.
+3	extern	like
+3	error	Lexical error on line 3: malformed number in argument to wizard
 5	;
-6	;
-7	;
+5	extern	There
+5	error	Lexical error on line 5: malformed number in argument to wizard
+6	extern	looks
+6	error	Lexical error on line 6: malformed number in argument to wizard
+7	error	Lexical error on line 7: unknown code: )
 8	;
 9	;
+9	O	123	0.0
 10	;
+10	M	98	0.0
+10	P	0	124.0
+10	L	4	0.0
 11	;
+12	;
+12	G	0	0.0
+13	;
+13	X	0	1.0
+13	Y	0	1.0
+14	;
+14	M	30	0.0
+15	;
+15	G	1	0.0
+15	X	0	1.0
+15	Y	0	1.0
+15	F	0	17.0
 16	;
+16	X	0	2.0
+16	Y	0	3.0
 17	;
+18	;
+18	O	125	0.0
+19	;
+19	M	6	0.0
+19	T	12	0.0
 20	;
+20	X	0	1.0
+20	Z	0	1.0
 21	;
-21	O	123	0.0
+21	M	99	0.0
 22	;
-22	extern	SimpleWiz
-22	num	4.0
 23	;
+23	O	125	0.0
 24	;
+24	G	0	0.0
+24	X	0	0.0
+24	Y	0	0.0
 25	;
+25	X	0	1.0
+25	Y	0	1.0
 26	;
-30	;
-31	;
-31	M	41	0.0
-32	;
-33	;
-33	M	98	0.0
-33	P	0	124.0
-33	L	4	0.0
-34	;
-36	;
-36	G	0	0.0
-37	;
-37	X	0	1.0
-37	Y	0	1.0
-38	;
-39	;
-39	M	30	0.0
-40	;
-41	;
-41	G	0	1.0
-41	X	0	1.0
-41	Y	0	1.0
-41	F	0	17.0
-42	;
-42	X	0	2.0
-42	Y	0	3.0
-43	;
-44	;
-44	O	125	0.0
-45	;
-45	M	6	0.0
-45	T	12	0.0
-46	;
-46	X	0	1.0
-46	Z	0	1.0
-47	;
-47	M	99	0.0
-48	;
-49	;
-49	O	125	0.0
-50	;
-53	;
-53	G	0	0.0
-53	X	0	0.0
-53	Y	0	0.0
-54	;
-54	X	0	1.0
-54	Y	0	1.0
-55	;
-55	M	99	0.0
-56	;
-57	;
+26	M	99	0.0
+27	;
+28	;

@@ -1,0 +1,18 @@
+
+(
+A simple test of skippable stuff. This should pass through pretty much
+unchanged.
+)
+
+O123
+
+G00
+M00
+M03 S500
+G01
+M09
+G00
+M49
+
+M30
+

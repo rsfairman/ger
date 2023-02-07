@@ -175,7 +175,7 @@ that they are trying to *do* something crazy.
 
 import java.util.ArrayDeque;
 
-import vcnc.Statement;
+//import vcnc.Statement;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.DataRegister;
@@ -183,6 +183,8 @@ import vcnc.tpile.parse.StatementData;
 
 
 public class Layer05 {
+
+  /*
 
   private Layer04 lowerLayer = null;
   
@@ -1198,7 +1200,7 @@ public class Layer05 {
       
     lowerLayer.reset();
   }
-  
+  */
   
 }
 

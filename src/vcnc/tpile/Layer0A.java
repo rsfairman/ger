@@ -27,6 +27,10 @@ import vcnc.tpile.parse.DataWizard;
 
 public class Layer0A {
   
+  
+  /*
+
+  
   // The statement objects from the lower layer, and the mark of where we
   // are in processing them.
   private ArrayList<StxP> theStatements = null;
@@ -190,6 +194,9 @@ public class Layer0A {
     
     return answer.toString();
   }
+*/
+  
+  
   
 }
 

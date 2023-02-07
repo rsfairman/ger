@@ -1,6 +1,17 @@
 package vcnc;
 
 
+// PATH FORWARD (which may change!)
+// * Finish the various layers, pretty much as they're set up.
+//   Implement the relevant GUI bits.
+// * Change the way layers are applied so that each statement
+//   flows through all layers (except cutter comp?) before the next 
+//   statement is considered.
+// * Move wizard expansion to the point immediately before application
+//   of cutter comp.
+// * Get going on rendering. Start with a 2D array with z-buffer.
+// * Allow for non-standard cutters. Probably need a bezier path language
+//   to do this well.
 
 
 
@@ -193,11 +204,7 @@ is launched. The amount of data could end up being pretty extensive, so the
 most flexible way is to use a .ger directory. See vcnc.persist.Persist. 
 
 This persistent data should go together, so it makes sense for it to all be
-set as a result of a single dialog. In particular, it should be clear to the
-user that the inch/mm choice affects the tool and work offsets tables.
-
-So...reorganized the WorkOffsets stuff, mostly with regard to the UI, and
-added the vcnc.tooltable package, most of which is a mess. I just wanted a
+set as a resulttable package, most of which is a mess. I just wanted a
 placeholder for the Swing aspects of the UI.
 
 Created Layer0A, with the intent of breaking up the wizard/machine directive
@@ -273,11 +280,59 @@ internal complexity of the wizard framework (invisible to the user).
 Plus...much fiddling to get things into a more usable form...basically, 
 resolving many small errors (or not so small).
 
+This version "works" as far as it goes (through Layer00 for M98/M99) and
+should be complete and bug-free (but has not been extensively tested).
 
+v11
 
+Get Layer01 working for G20/G21 (inches/mm)... Attempting this made me
+realize that the change to how layers work was a mistake. In much earlier
+versions, each layer acted like a middle-man; it took a statement from a lower
+layer, digested it, and passed it to the next layer. Then I changed it so that
+each layer digests the entire input G-code, and passes the entire result
+to the next layer. That doesn't work, even for something as simple as inch/mm
+conversion. How that conversion is done depends on whether you are in polar 
+coordinate mode and which is the current reference plane (AxisChoice). You 
+can't do the inch/mm conversion unless you've completely digested everything,
+noting any changes to state as you go.
 
+That said, the buffers used between layers prior to v08 were awkward -- sort
+of clever, but also fiddly. Going forward, a linked list makes sense. The
+Parser will produce a linked list of statements of the complete program. 
+Each layer may insert or remove statements (or modify them in place). Note
+that the "layers" will no longer be separate classes, but something more
+like methods in a single class.
 
- 
+Unfortunately, java.util.LinkedList is stupid. A linked list is the right
+way to do this, but java.util.LinkedList doesn't allow for access to the
+nodes/links themselves. I tried ArrayList, but without "nodes," dealing
+with sub-programs is difficult. You want to return from a sub-program to a
+specific point in the program, but you can't do it by line number (i.e.,
+index in the array) since they change. It *might* be possible to use ArrayList
+by relying on the idea that an object can serve as the reference to the 
+(sort-of) node, but the resulting code is not very clear. Bottom line: I 
+wrote my own linked list (and node) class. See vcnc.util.LList and LLNode.
+
+v12
+
+I had a break while I did a bit of playing around with Haskell on the 
+"yatzee problem." The idea of using Haskell for the transpiling part of the 
+task is mildly tempting, but mixing languages seems like a bad idea. There's
+also the problem of how to allow users to define wizards. It's one thing for
+people to use Java, but something else entirely to expect them to use Haskell.
+It *is* possible to call Java from Haskell, including Swing -- see 
+https://www.tweag.io/blog/2017-09-15-inline-java-tutorial/
+but it seems like a big headache for a modest project like this.
+
+First thing: go back to the original Statement type. The idea of the various
+St-whatever types was good in theory, in that it helps to enforce and make
+clear where you are in the process, but it's difficult to work with.
+
+This is pretty clean up through Translator.ThruUnits -- the translator; the
+GUI has some uglier bits. This is the most basic things, like G20/21 and
+it can expands simple wizards (linear moves only).  
+
+Slowly trashing old code too as things are refactored...
 
 
 
@@ -382,20 +437,20 @@ public class Main {
   	
   	
   	
-  	/*
+  	
   	// BUG: Testing
   	MainWindow other = mainWindow.doNewWindow();
   	
   	String dir = "C:\\Users\\rsf\\Documents\\WorkArea\\vcnc\\ancient\\qt dev\\vcnc\\vcnc14\\test suite";
 
-    mainWindow.doOpen(dir,"layer00.txt");
-    mainWindow.doOpen(dir,"layer01.txt");
-    mainWindow.doOpen(dir,"layer02.txt");
-
-    other.doOpen(dir,"layer03.txt");
-    other.doOpen(dir,"layer04.txt");
-    other.doOpen(dir,"layer05.txt");
-  	*/
+//    mainWindow.doOpen(dir,"layer00.txt");
+//    mainWindow.doOpen(dir,"layer01.txt");
+//    mainWindow.doOpen(dir,"layer02.txt");
+//
+//    other.doOpen(dir,"layer03.txt");
+//    other.doOpen(dir,"layer04.txt");
+//    other.doOpen(dir,"layer05.txt");
+  	
   }
 	
   public static void guiMain() {
@@ -444,12 +499,8 @@ public class Main {
     // To run the units tests.
     // You can run any or all of these, and the test of each layer may
     // consist of several individual tests.
-    System.out.println("Running unit tests...");
-    
     UnitTests.setDir(path);
     UnitTests.testAll();
-    
-    System.out.println("Unit tests complete.");
     
   }
   
@@ -469,7 +520,7 @@ public class Main {
     //   output to stdout.
     // * 'compile' takes a wizard name. The associated .java file must be in 
     //   the .ger directory. This is slightly redundant since 'translate' 
-    //   will attempt to compile too, provided there's an uncomplied wizard 
+    //   will attempt to compile too, provided there's an uncompiled wizard 
     //   referenced by the G-code.
     
     if ((args == null) || (args.length == 0))
@@ -545,14 +596,12 @@ public class Main {
         try {
           
         String inCode = FileIOUtil.loadFileToString(".",args[1]);
-        String outCode = Translator.digestAll(inCode,Translator.ToL00);
+        String outCode = Translator.digest(inCode,Translator.ThruEverything);
         System.out.println(outCode);
         
         } catch (Exception e) {
           System.err.println("Problem: " +e.getMessage());
         }
-        
-        
         
         return false;
       }

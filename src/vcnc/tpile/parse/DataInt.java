@@ -18,4 +18,10 @@ public class DataInt extends StatementData {
 	public DataInt(int v) {
 		this.value = v;
 	}
+
+  public DataInt deepCopy() {
+    
+    DataInt answer = new DataInt(this.value);
+    return answer;
+  }
 }

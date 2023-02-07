@@ -17,7 +17,7 @@ close() is no longer needed.
 
 import java.util.ArrayList;
 
-import vcnc.tpile.St0B;
+import vcnc.tpile.Statement;
 
 import vcnc.tpile.parse.DataMove;
 
@@ -29,11 +29,11 @@ public class MoveMaker {
   private DataMove theMove = null;
   
   
-  public MoveMaker(ArrayList<St0B> wizout) {
+  public MoveMaker(ArrayList<Statement> wizout) {
     
     // Insert a place-holder move into wizout, and each time one of X/Y/Z/F
     // is changed, this move is updated.
-    St0B theCode = new St0B(St0B.MOVE);
+    Statement theCode = new Statement(Statement.MOVE);
     
     this.theMove = new DataMove();
 

@@ -18,4 +18,12 @@ public class DataTLO extends StatementData {
     return answer;
   }
 
+  public DataTLO deepCopy() {
+    
+    DataTLO answer = new DataTLO();
+    answer.hRegister = this.hRegister;
+    answer.hasZ = this.hasZ;
+    answer.zValue = this.zValue;
+    return answer;
+  }
 }

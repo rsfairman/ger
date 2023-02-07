@@ -207,6 +207,7 @@ public class Persist {
     // that's fairly trivial could go in here. If so, I should rename
     // all these variables and methods not to use 'inch'.
     
+//    System.out.println("machine set to inch == " +MachineState.machineInchUnits);
   }
   
   private static void saveInch() {

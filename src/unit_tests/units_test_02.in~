@@ -1,0 +1,22 @@
+
+(
+Basic test of G20/21 for inch/mm
+)
+
+O123
+
+G00
+M00
+G01 X1.0 Y1.0
+G20
+X2.0 Y1.5
+G21
+X1.5 Y2.0
+G20
+X3.0 Y2.5
+M09
+G00
+M49
+
+M30
+

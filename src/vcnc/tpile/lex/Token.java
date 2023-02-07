@@ -66,9 +66,10 @@ public class Token {
   // to be handled with a reasonable amount of effort. See the comment in Main
   // for v06.
   //
-  // BUG: If I firmly choose to abandon handling these kinds of G-codes, then
+  // If I firmly choose to abandon handling these kinds of G-codes, then
   // I could get rid of this and there are some minor simplifications this
-  // would permit in the lexer too.
+  // would permit in the lexer too. It seems better to keep this since
+  // there are codes like this, even if they are uncommon.
   public int isub = -1;
   
   // And externally defined functions (wizards) have a name.
@@ -124,7 +125,8 @@ public class Token {
     else if (letter == Token.ERROR)
       answer += "error\t" + error;
     else
-      // Normal G-code
+      // Normal G/M/whatever-code
+      // BUG: Ignoring this.isub.
       answer += letter+ "\t" +i+ "\t" + d;
     
     return answer;

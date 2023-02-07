@@ -1,6 +1,0 @@
-(Something really short for debugging when the interpreter dies immediately.)
-O123
-G00 Z-.025
-G00 X1 Y1
-G02 X1 Y1 R2.0
-M30

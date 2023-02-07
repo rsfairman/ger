@@ -1,0 +1,19 @@
+
+O123
+M98 P125 ( no L value. Does it work?)
+
+G00
+X1 Y1
+M30
+
+( These two lines should disappear since they're after M30)
+G01 X1 Y1 F17
+X2 Y3
+
+O125
+M06 T12
+X1 Z1
+M99
+
+
+

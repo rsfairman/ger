@@ -44,6 +44,7 @@ import vcnc.ui.TabMgmt.StaticWindow;
 import vcnc.ui.TabMgmt.TabbedType;
 import vcnc.ui.TabMgmt.TypedDisplayItem;
 import vcnc.ui.TabbedPaneDnD.TabbedPaneDnD;
+import vcnc.unittest.UnitTests;
 import vcnc.util.FileIOUtil;
 import vcnc.util.LoadOrSaveDialog;
 import vcnc.util.ChoiceDialogRadio;
@@ -363,7 +364,7 @@ public class MainWindow extends JFrame
   */
   
   
-  private void doSimplify(int layer) throws OutOfMemoryError {
+  private void doSimplify(int layer) {
 
     // BUG: Should reset the MachineState to whatever is from the .ger
     // preferences directory. Individual G-code scripts can reset certain
@@ -377,6 +378,7 @@ public class MainWindow extends JFrame
     // to stop the translation. Translator defines certain values to be used
     // as the layer count: Translator.ToL00, etc.
     
+    // BUG: Blah...this whole thing needs to be reworked.
   	
     // Look at the top-most tab, but only use it if it's input G-code.
     int curTabIndex = theTabs.getSelectedIndex();
@@ -395,9 +397,9 @@ public class MainWindow extends JFrame
     
   	// BUG: Get rid of exception?
   	
-  	try {
+//  	try {
   	  String fullyDigested = 
-  	      Translator.digestAll(gCodeTab.getTextArea().getText(),layer);
+  	      Translator.digest(gCodeTab.getTextArea().getText(),layer);
   	  
   	  // There could be numerous tabs open for the various forms of partially
   	  // translated output of this G-code.
@@ -406,7 +408,7 @@ public class MainWindow extends JFrame
   	  // BUG: And the lexer could be done here too, I think.
   	  // BUG: Can these cases (which are almost identical) be combined?
   	  // Put somewhere else? Hideous.
-  	  if (layer == Translator.ToLxP)
+  	  if (layer == Translator.ThruParser)
   	    {
   	      if (gCodeTab.parseOut != null)
   	        {
@@ -436,7 +438,7 @@ public class MainWindow extends JFrame
   	          gCodeTab.parseOut = parseOutput;
   	        }
   	    }
-      else if (layer == Translator.ToL0A)
+      else if (layer == Translator.ThruDirectives)
         {
           if (gCodeTab.layer0AOut != null)
             {
@@ -480,6 +482,7 @@ public class MainWindow extends JFrame
               gCodeTab.layer0BOut = layer0BOutput;
             }
         }
+  	  /*
       else if (layer == Translator.ToL00)
         {
           if (gCodeTab.layer00Out != null)
@@ -501,16 +504,16 @@ public class MainWindow extends JFrame
                   layer00Output);
               gCodeTab.layer00Out = layer00Output;
             }
-        }
+        */
       else
         System.err.println("Fell through adding tab of unknown type");
   	  
   	  
   	
-  	} catch (Exception e) {
-      JOptionPane.showMessageDialog(this,e.getMessage());
-      return;
-  	}
+//  	} catch (Exception e) {
+//      JOptionPane.showMessageDialog(this,e.getMessage());
+//      return;
+//  	}
   }
   
   /*
@@ -1114,16 +1117,18 @@ public class MainWindow extends JFrame
 	      saveToFile();
 	  	else if (e.getActionCommand().equals("Quit"))
 	      System.exit(0);
-	  	else if (e.getActionCommand().equals("Test Lexer"))
-	      doTestLexer();
-      else if (e.getActionCommand().equals("Test Parser"))
-        doSimplify(Translator.ToLxP);
-      else if (e.getActionCommand().equals("Test Directives"))
-        doSimplify(Translator.ToL0A);
-      else if (e.getActionCommand().equals("Test Wizards"))
+      else if (e.getActionCommand().equals("Unit Tests"))
+        UnitTests.testAll();
+      else if (e.getActionCommand().equals("Thru Lexer"))
+        doTestLexer();
+      else if (e.getActionCommand().equals("Thru Parser"))
+        doSimplify(Translator.ThruParser);
+      else if (e.getActionCommand().equals("Thru Directives"))
+        doSimplify(Translator.ThruDirectives);
+      else if (e.getActionCommand().equals("Thru Units"))
+        doSimplify(Translator.ThruUnits);
+      else if (e.getActionCommand().equals("Thru Wizards"))
         doSimplify(Translator.ToL0B);
-	  	else if (e.getActionCommand().equals("Simplify 00"))
-	      doSimplify(Translator.ToL00);
 	  	else if (e.getActionCommand().equals("Simplify 01"))
 	      doSimplify(Translator.ToL01);
 	  	else if (e.getActionCommand().equals("Simplify 02"))
@@ -1185,16 +1190,13 @@ public class MainWindow extends JFrame
     theMenuBar.add(theMenu);
     
     theMenu = new Menu("Test",false);
-    theMenu.add(new MenuItem("Test Lexer",new MenuShortcut(KeyEvent.VK_L,false)));
-    theMenu.add(new MenuItem("Test Parser",new MenuShortcut(KeyEvent.VK_P,false)));
-    theMenu.add(new MenuItem("Test Directives",new MenuShortcut(KeyEvent.VK_D,false)));
-    theMenu.add(new MenuItem("Test Wizards",new MenuShortcut(KeyEvent.VK_W,false)));
-    theMenu.add(new MenuItem("Simplify 00"));
-//    theMenu.add(new MenuItem("Simplify 01"));
-//    theMenu.add(new MenuItem("Simplify 02"));
-//    theMenu.add(new MenuItem("Simplify 03"));
-//    theMenu.add(new MenuItem("Simplify 04"));
-//    theMenu.add(new MenuItem("Simplify 05"));
+    // Having the unit tests here makes it easier to run the symbolic debugger.
+    theMenu.add(new MenuItem("Unit Tests",new MenuShortcut(KeyEvent.VK_U,false)));
+    theMenu.add(new MenuItem("Thru Lexer"));
+    theMenu.add(new MenuItem("Thru Parser"));
+    theMenu.add(new MenuItem("Thru Directives"));
+    theMenu.add(new MenuItem("Thru Units"));
+    theMenu.add(new MenuItem("Thru Wizards"));
 //    theMenu.add(new MenuItem("Test Pulses"));
 //    theMenu.add(new MenuItem("Test Voxel Frame"));
     theMenu.addActionListener(this);

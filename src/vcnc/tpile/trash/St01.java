@@ -1,4 +1,4 @@
-package vcnc.tpile;
+package vcnc.tpile.trash;
 
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataInt;
@@ -9,6 +9,7 @@ public class St01 extends St05 {
 
   
 
+  public static final short WIZARD = 1001;
 
   public static final short M05   =  6;   // spindle off
   public static final short M00   =  7;   // Hard program stop

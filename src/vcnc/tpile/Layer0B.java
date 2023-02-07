@@ -42,6 +42,10 @@ import vcnc.wizard.WizardBase;
 
 public class Layer0B {
 
+  
+  /*
+
+
   // The statement objects from the lower layer, and the mark of where we
   // are in processing them.
   private ArrayList<StxP> theStatements = null;
@@ -81,18 +85,18 @@ public class Layer0B {
     return "Error on line " +lineNumber+ ": " +msg;
   }
   
-  private St0B formError(St0B s,String msg) {
+  private StxP formError(StxP s,String msg) {
     
     // BUG: This is a much better way to do things.
     // See I can get rid of the "other" formError() in all classes that do this.
-    St0B answer = new St0B(St0B.ERROR);
+    StxP answer = new StxP(StxP.ERROR);
     answer.lineNumber = s.lineNumber;
     answer.charNumber = s.charNumber;
     answer.error = formError(s.lineNumber,msg);
     return answer;
   }
   
-  private ArrayList<St0B> nextStatements() {
+  private ArrayList<StxP> nextStatements() {
     
     // Pull a single statement out of the array from Layer0A, and convert it.
     // Most of this time, there's nothing to do, but wizards may be transformed
@@ -127,7 +131,7 @@ public class Layer0B {
         // wizard before the O-statement is in error. It should be impossible
         // for this to arise anyway.
         DataWizard wizData = (DataWizard) s.data;
-        St0B err = 
+        StxP err = 
             formError(s,"Unknown machine directive: " +wizData.cmd);
         return new ArrayList<>(List.of(err));
       } 
@@ -221,7 +225,7 @@ public class Layer0B {
     return classLoadable(cName);
   }
   
-  private ArrayList<St0B> expandWizard(StxP w) {
+  private ArrayList<StxP> expandWizard(StxP w) {
     
     // Convert the given wizard statement to a series of straight G-code
     // statements. If there's a problem, return an ArrayList consisting of
@@ -240,8 +244,8 @@ public class Layer0B {
     if (theWizard == null)
       {
         // Still null, so not a known class. Return an error Statement.
-        ArrayList<St0B> answer = new ArrayList<>(1);
-        St0B e = formError(w,"Unknown wizard: " +wiz.cmd);
+        ArrayList<StxP> answer = new ArrayList<>(1);
+        StxP e = formError(w,"Unknown wizard: " +wiz.cmd);
         answer.add(e);
         return answer;
       }
@@ -260,11 +264,11 @@ public class Layer0B {
     
     Layer0B curLayer = new Layer0B(Layer0A.process(gCode));
     
-    ArrayList<St0B> newOnes = curLayer.nextStatements();
+    ArrayList<StxP> newOnes = curLayer.nextStatements();
     
     while (newOnes.get(0).type != St0B.EOF)
       {
-        for (St0B s : newOnes)
+        for (StxP s : newOnes)
           answer.add(s);
         newOnes = curLayer.nextStatements();
       }
@@ -290,6 +294,9 @@ public class Layer0B {
     
     return answer.toString();
   }
+  
+  */
+  
   
   
 }

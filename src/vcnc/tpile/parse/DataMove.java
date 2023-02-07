@@ -40,4 +40,11 @@ public class DataMove extends StatementData {
 		this.zValue = z;
 		this.fValue = f;
 	}
+	
+	public DataMove deepCopy() {
+	  
+	  DataMove answer = new DataMove(this.xDefined,this.yDefined,this.zDefined,
+	      this.fDefined,this.xValue,this.yValue,this.zValue,this.fValue);
+	  return answer;
+	}
 }

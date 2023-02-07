@@ -52,10 +52,10 @@ public class Lexer {
       answer = Token.EOF;
     }
     
-    // Use ';' for new lines. 
+    // Use ';' (Token.EOL) for new lines. 
     if (answer == '\n')
       {
-        answer = ';';
+        answer = Token.EOL;
         ++lineCount;
       }
     
@@ -71,6 +71,16 @@ public class Lexer {
       answer = Token.EOF;
     }
     return answer;
+  }
+  
+  private void advanceToEOL() {
+  
+    // Occasionally, when there's an error in the input code, the best way to
+    // get out of it is to skip to the EOL and ignore everything up to that 
+    // point.
+    char c = getc();
+    while ((c != Token.EOL) && (c!= Token.EOF))
+      c = getc();
   }
   
   private int readComment() {
@@ -146,12 +156,12 @@ public class Lexer {
         // \r, which can always be ignored.
         if ((c == ' ') || (c == '\t') || (c == '\r'))
           {
-            // Not done; keep reading
+            // Keep reading
             char ignore = getc();
           }
         else if (c == '(')
           {
-            // Advance to make the previous peekc() a getc().
+            // Opening comment. Advance to make the previous peekc() a getc().
             char ignore = getc();
             int comClose = readComment();
             if (comClose != CommentClosedNormally)
@@ -282,7 +292,12 @@ public class Lexer {
     // are reading the digits of a number, then stopping.
     Token answer = new Token('G',lineCount);
     try {
-      answer.d = readWholeNumber();
+      
+      // BUG: changing... Not sure why I was using d (double) here.
+      //answer.d = readWholeNumber();
+      
+      
+      answer.i = readWholeNumber();
       
       // Maybe this is a GXX.XX type code, with a "subpart" to the number.
       char c = peekc();
@@ -407,6 +422,8 @@ public class Lexer {
     
     // This is one of the rare situations where I care about the character at
     // which this occurred since we need it for subroutines.
+    // BUG: DO I care??? Things have changed and character counts may not
+    // be needed anymore.
     // This is the character at which the "O" occurs, with 0 as the first 
     // character.
     answer.characterCount = theCode.getLastCharIndex()-1;
@@ -618,6 +635,9 @@ public class Lexer {
     int closed = readWhite();
     if (closed == CommentNotClosed)
       {
+        // NOTE: Nested comments lead to all kinds of "extra" errors in the
+        // output. It might be less confusing to the user if the entire
+        // process just halted here.
         answer = new Token(Token.ERROR,lineCount);
         answer.error = formError(lineCount,"comment not closed");
         return answer;
@@ -637,8 +657,12 @@ public class Lexer {
         // numbers and strings up till we reach EOL.
         answer = readWizardToken();
         
-        if ((answer.letter == Token.EOL) || (answer.letter == Token.EOF))
+        if ((answer.letter == Token.EOL) || (answer.letter == Token.EOF) ||
+            (answer.letter == Token.ERROR))
           this.wizardMode = false;
+        
+        if (answer.letter == Token.ERROR)
+          advanceToEOL();
         
         answer.endCount = theCode.getLastCharIndex();
         return answer;
@@ -662,8 +686,6 @@ public class Lexer {
     // Got here, so it's a normal G-code. Nothing to do with wizard functions.
     readSpaces();
     
-    // BUG: For reasons I haven't unraveled, you can get a whole
-    // bunch of EOF tokens (*) at the end. They don't hurt anything, but...
     switch (c)
       {
         case Token.EOF  :  
@@ -711,6 +733,8 @@ public class Lexer {
     Token t = lex.readToken();
     while (t.letter != Token.EOF)
       {
+//        System.out.println("Token: " +t.toString());
+        
         answer.add(t);
         t = lex.readToken();
       }

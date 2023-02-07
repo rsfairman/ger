@@ -4,11 +4,10 @@ package vcnc.unittest;
 
 Various static methods to run the tests.
 
-Each layer of the translator, starting with the lexer, has a method below, and
-each of these methods may run several tests. Each test consists of running
-some G-code through the transpiler up to the given layer. The output of this
-run is compared to a static reference file, with all comparisons done with
-Strings.
+Each layer of the translator, starting with the lexer, has list of input
+test files below. Each test consists of running some G-code through the
+transpiler up to the given layer. The output of this run is compared to a
+static reference file, with all comparisons done with Strings.
 
 Each of the input files is ordinary G-code. Most of them should transpile
 normally -- although maybe what it would do on a physical machine is dumb --
@@ -23,16 +22,14 @@ Sometimes, they'll be different, even though there is no error because the code
 was changed -- and changed correctly. When this happens, manually copy 
 'lex_test_id.out' to 'lex_test_id.ref' for future tests.
 
-BUG: If these tests proliferate, it might make sense to put them in 
-sub-directories of unit_tests, one sub-dir for each layer.
+BUG: As these tests proliferate, it might make sense to put them in 
+sub-directories of unit_tests.
 
 */
 
 import java.io.File;
 
 import vcnc.util.FileIOUtil;
-
-import vcnc.tpile.lex.Lexer;
 
 import vcnc.tpile.Translator;
 
@@ -61,74 +58,117 @@ public class UnitTests {
       "lex_test_01"
   };
   
-  // And the same idea for the other layers.
+  // And the same idea for the other layers. The idea of "layers" is sort of
+  // bogus as of v11, but it makes some sense when testing. These layers
+  // correspond roughly to the degree of translation specified by
+  // Translator.ThruParser, .ThruSubProgs, etc.
+    
+  // For the ThruParser stage.
   private static String[] parseTests = {
       "parse_test_01"
+     ,"parse_test_02" 
   };
+
+  // For the ThruDirectives stage.
+  private static String[] directiveTests = {
+      "directive_test_01"
+  };
+  
+  // For the ThruSubProgs stage.
+  private static String[] subprogTests = {
+       "subprog_test_01"
+      ,"subprog_test_02"
+      ,"subprog_test_03"
+      ,"subprog_test_04"
+      ,"subprog_test_05"
+      ,"subprog_test_06"
+      ,"subprog_test_07"
+      ,"subprog_test_08"
+      ,"subprog_test_09"
+      ,"subprog_test_10"
+  };
+
+  // This is for the ThruUnits stage. Yes, the name is unfortunate, given that 
+  // it appears in the code for unit tests.
+  // Several things happen in this layer: choosing a reference plane
+  // (G17/18/19), inch/mm (G20/21), polar coords (G15/16) and a check
+  // for correct syntax and geometry for G02/03. While we're at it, throw
+  // in some tests for skippable stuff, like M02 and M41 since that happens
+  // in this stage too.
+  private static String[] unitsTests = {
+      "units_test_01"
+     ,"units_test_02"
+  };
+  
+  // For the wizard layer
+  private static String[] wizardTests = {
+      "wizard_test_01"
+//     ,"wizard_test_02"
+  };
+  
+  
   
   public static void setDir(String dir) {
     testDir = dir;
   }
-  
-  // BUG: These test methods are nearly identical. Combine them somehow.
-  
-  public static void testLexer() {
+
+
+  public static void runTests(String[] infiles,int layer) {
     
-    // Run all the lexer tests...
-    for (int i = 0; i < lexTests.length; i++)
-      {
-        // Load an entire test file for input.
-        String inString = 
-            FileIOUtil.loadFileToString(testDir,lexTests[i]+".in");
-        
-        // Run through the Lexer.
-        String outString = Lexer.digestAll(inString); 
-        
-        // Save the resulting output.
-        FileIOUtil.saveStringAsAscii(
-            testDir,lexTests[i] + ".out",outString);
-        
-        // Read the reference file.
-        String refString = 
-            FileIOUtil.loadFileToString(testDir,lexTests[i] + ".ref");
-        
-        // Compare the two Strings, and flag the problem, if there is one.
-        if (refString.equals(outString) == false)
-          System.err.println("Unit test failed for " +lexTests[i]);
-      }
-  }
-  
-  public static void testParser() {
-    
-    // As above.
-    for (int i = 0; i < parseTests.length; i++)
+    // Common code to run the various tests. The infiles are the names
+    // of the files to run, and layer is one of Translator.ThruLexer, etc.
+
+    for (int i = 0; i < infiles.length; i++)
       {
         String inString = 
-            FileIOUtil.loadFileToString(testDir,parseTests[i]+".in");
-        
-        // BUG: Get rid of exceptions?
+            FileIOUtil.loadFileToString(testDir,infiles[i]+".in");
+
         try {
-          String outString = Translator.digestAll(inString,-1);
+          
+          if (inString == null)
+            {
+              System.err.println("Skipping " +infiles[i]+
+                  " because it does not exist!");
+              continue;
+            }
+        
+          System.out.println("Testing " + infiles[i]);
+          String outString = Translator.digest(inString,layer);
 
           FileIOUtil.saveStringAsAscii(
-              testDir,parseTests[i] + ".out",outString);
+              testDir,infiles[i] + ".out",outString);
           
           String refString = 
-              FileIOUtil.loadFileToString(testDir,parseTests[i] + ".ref");
+              FileIOUtil.loadFileToString(testDir,infiles[i] + ".ref");
           
-          if (refString.equals(outString) == false)
-            System.err.println("Unit test failed for " +parseTests[i]);
+          if (refString == null)
+            System.err.println("Failure for " +infiles[i]+ 
+                " because .ref file does not exist.");
+          else if (refString.equals(outString) == false)
+            System.err.println("Unit test failed for " +infiles[i]);
           
         } catch (Exception e) {
-          System.err.println("Parsing exception: " + e.getMessage());
+          System.err.println(
+              "Parsing exception with: " +infiles[i]+ ": "+ e.getMessage());
+          e.printStackTrace();
         }
       }
   }
   
+  
   public static void testAll() {
 
-    testLexer();
-    testParser();
+    System.out.println("Running unit tests...");
+
+    runTests(lexTests,Translator.ThruLexer);
+    runTests(parseTests,Translator.ThruParser);
+    runTests(directiveTests,Translator.ThruDirectives);
+    runTests(subprogTests,Translator.ThruSubProgs);
+    runTests(unitsTests,Translator.ThruUnits);
+
+    runTests(wizardTests,Translator.ThruWizards);
+    
+    System.out.println("Unit tests complete.");
   }
 
   

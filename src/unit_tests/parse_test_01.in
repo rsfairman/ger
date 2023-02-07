@@ -1,12 +1,5 @@
-(To test Layer00)
-(There's not a lot that could go wrong since Layer00 serves only to get rid of)
-(M98 and M99 for calling sub-programs.)
-(Possible errors and warnings: )
-(  No program number at the start of the program.)
-(  Using the same program number more than once.)
-(  Bogus codes, like G400.)
 
-(See what happens with an unclosed comment:)
+(See what happens with an unclosed comment:
 
 (
 SetPart 10 12 2

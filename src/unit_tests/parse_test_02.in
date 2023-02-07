@@ -1,0 +1,47 @@
+
+(
+SetPart 10 12 2
+SetMargin 1.0
+SetZero 1 1 0.5
+)
+
+(
+SimpleWiz 4
+)
+
+O123
+SimpleWiz 4
+(M30) (what happens if the program immediately halts?)
+
+(Some bad G-codes)
+(
+G300
+G-11
+)
+
+M41 (should be filtered out: spindle hi/low)
+
+M98 P124 L4 (try commenting out the L4 to see if it does call the sub-program once.)
+            (Another test: see what happens if the program number refers to a number
+             that's never defined -- no program defined under that O-value. )
+G00
+X1 Y1
+
+M30  (Try leaving this out and see what happens)
+
+G01 X1 Y1 F17
+X2 Y3
+
+O125 (generates an error; switch this to O124)
+M06 T12
+X1 Z1
+M99      (Subroutine return. Try leaving this off)
+
+O125  (Should cause an error: reusing program number)
+      (Change the number to 129 and try again. 
+       That will mean that the sub-program call above refers to a
+       non-existant O-value.)
+G00 X0 Y0
+X1 Y1
+M99
+

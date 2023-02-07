@@ -24,4 +24,29 @@ public class DataCircular extends StatementData {
 	
 	// There may also be a feed rate. Ignore this if it is negative.
 	public double F = -1.0;
+	
+	public DataCircular deepCopy() {
+	  
+	  DataCircular answer = new DataCircular();
+    
+	  answer.rDefined = this.rDefined;
+    answer.xDefined = this.xDefined;
+    answer.yDefined = this.yDefined;
+    answer.zDefined = this.zDefined;
+    answer.iDefined = this.iDefined;
+    answer.jDefined = this.jDefined;
+    answer.kDefined = this.kDefined;
+
+    answer.R = this.R;
+    answer.X = this.X;
+    answer.Y = this.Y;
+    answer.Z = this.Z;
+    answer.I = this.I;
+    answer.J = this.J;
+    answer.K = this.K;
+	  
+    answer.F = this.F;
+    
+	  return answer;
+	}
 }

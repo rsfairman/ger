@@ -8,6 +8,10 @@ of the Java compiler doesn't choke.
 
 */
 
-public class StatementData {
+abstract public class StatementData {
+  
+  // I am not happy about this. but a deep copy of Statements is needed
+  // when dealing with sub-programs.
+  abstract public StatementData deepCopy();
 
 }

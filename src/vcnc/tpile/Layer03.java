@@ -1,12 +1,15 @@
 package vcnc.tpile;
 
-import vcnc.Statement;
+//import vcnc.Statement;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
 
 
 public class Layer03 {
   
+  /*
+
+
   private Layer02 lowerLayer = null;
 
   // For every tool move, we note where the tool ended up. This is needed when
@@ -576,6 +579,9 @@ public class Layer03 {
     lowerLayer.reset();
   }
 
+
+*/
+  
 }
 
 

@@ -3,7 +3,7 @@ package vcnc.tpile;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.DataTLO;
-import vcnc.Statement;
+//import vcnc.Statement;
 // BUG: Tool turret is a mess, with a mixture of the Java and C++ versions
 // at work.
 import vcnc.tooltable.ToolTurret;
@@ -11,6 +11,10 @@ import vcnc.tooltable.ToolTurret;
 
 public class Layer02 {
   
+  
+  /*
+
+
   private Layer01 lowerLayer = null;
   
   public Layer02(CodeBuffer theText) throws Exception {
@@ -27,7 +31,7 @@ public class Layer02 {
   
   
   
-  
+*/  
 
   /*
 
@@ -62,6 +66,9 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
 }
 */
 
+  /*
+  
+  
   private void changeToError(Statement cmd,String msg) {
     
     // Change the given statement to an ERROR with the given error msg.
@@ -303,7 +310,9 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
     
     // Read and translate statements to be passed up to the next layer.
     
-    
+    /*
+     BUG: COMMENTED OUT TO QUIET THE COMPILER
+     
     // First, make sure that there aren't any special cancel commands
     // that must be sent due to a previous M06.
   //  if (m06TLOCancel == true) { m06TLOCancel = false; return &STLOCancel; }
@@ -439,8 +448,11 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
       }
     
     return answer;
-  }
+    */
+//    return null;
+//  }
 
+  /*
   public void reset() {
     
     // This may not be the best approach, but we are resetting only the
@@ -457,7 +469,7 @@ Layer02::Layer02(QString theCode,bool inch,const ToolTurret *turret,const WorkOf
     lowerLayer.reset();
   }
 
-
+*/
 }
 
 

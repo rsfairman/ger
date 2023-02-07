@@ -11,7 +11,9 @@ This creates a Lexer and consumes Token objects from it.
 
 import java.util.ArrayList;
 
-import vcnc.tpile.StxP;
+import vcnc.util.LList;
+
+import vcnc.tpile.Statement;
 import vcnc.tpile.lex.Lexer;
 import vcnc.tpile.lex.Token;
 
@@ -86,10 +88,10 @@ public class Parser {
       }
   }
   
-  private void parseWizard(StxP answer,Token startToken) {
+  private void parseWizard(Statement answer,Token startToken) {
     
     // Have just read a wizard command. Parse to the end of the line.
-    answer.type = StxP.WIZARD;
+    answer.type =Statement.WIZARD;
     
     DataWizard wiz = new DataWizard();
     answer.data = wiz;
@@ -109,7 +111,7 @@ public class Parser {
           wiz.args.add(t.d);
         else
           {
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,
                 "Unexpected argument to wizard");
             return;
@@ -121,20 +123,20 @@ public class Parser {
     return;
   }
   
-  private void parseGCode(StxP answer,Token startToken) {
+  private void parseGCode(Statement answer,Token startToken) {
     
     // Have already read the G-something token. Read anything else needed to 
     // form a complete statement.
     
     if (startToken.i == 0)
-      answer.type = StxP.G00;
+      answer.type = Statement.G00;
     else if (startToken.i == 1)
-      answer.type = StxP.G01;
+      answer.type = Statement.G01;
     else if ((startToken.i == 2) || (startToken.i == 3))
       {
         // Circular interpolation. Both cases are similar.
-        if (startToken.i == 2) answer.type = StxP.G02;
-        if (startToken.i == 3) answer.type = StxP.G03;
+        if (startToken.i == 2) answer.type = Statement.G02;
+        if (startToken.i == 3) answer.type = Statement.G03;
         
         // What follows must be some combination of the following:
         // X## Y## Z## I## J## K## R## F##
@@ -257,7 +259,7 @@ public class Parser {
         else
           {
             // Something's not right. G02/G03 is missing both I,J,K and R.
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,
                 "G02/03 improperly specified");
             readToEOLOrSemi();
@@ -279,7 +281,7 @@ public class Parser {
         if ((data.xDefined == false) && (data.yDefined == false) 
             && (data.zDefined == false) && (data.rDefined == true))
             {
-              answer.type = StxP.ERROR;
+              answer.type = Statement.ERROR;
               answer.error = formError(startToken.lineNumber,
                   "radius given, but no end-point");
               readToEOLOrSemi();
@@ -287,28 +289,28 @@ public class Parser {
       } // end circular interpolation case.
     else if (startToken.i == 15)
       // Polar coordinates off.
-      answer.type = StxP.G15;
+      answer.type = Statement.G15;
     else if (startToken.i == 16)
       // Polar coordinates on.
-      answer.type = StxP.G16;
+      answer.type = Statement.G16;
     else if (startToken.i == 17)
       // Choose coordinate axes.
-      answer.type = StxP.G17;
+      answer.type = Statement.G17;
     else if (startToken.i == 18)
       // Choose coordinate axes.
-      answer.type = StxP.G18;
+      answer.type = Statement.G18;
     else if (startToken.i == 19)
       // Choose coordinate axes.
-      answer.type = StxP.G19;
+      answer.type = Statement.G19;
     else if (startToken.i == 20)
-      answer.type = StxP.G20;
+      answer.type = Statement.G20;
     else if (startToken.i == 21)
-      answer.type = StxP.G21;
+      answer.type = Statement.G21;
     else if (startToken.i == 28)
-      answer.type = StxP.G28;
+      answer.type = Statement.G28;
     else if (startToken.i == 40)
       // Cancel cutter comp.
-      answer.type = StxP.G40;
+      answer.type = Statement.G40;
     else if ((startToken.i == 41) || (startToken.i == 42)) 
       {
         // Apply cutter comp. After the G41 or G42, this takes the form
@@ -321,8 +323,8 @@ public class Parser {
         // This is what I will do. Whatever follows the G41/42 D/H##
         // must be read as a separate statement.
         DataRegister data = new DataRegister();
-        if (startToken.i == 41) answer.type = StxP.G41;
-        if (startToken.i == 42) answer.type = StxP.G42;
+        if (startToken.i == 41) answer.type = Statement.G41;
+        if (startToken.i == 42) answer.type = Statement.G42;
         
         // Next token should be D or H.
         Token next = getToken();
@@ -332,7 +334,7 @@ public class Parser {
           data.D = false;
         else
           {
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,
                 "G41/42 not followed by H or D");
             readToEOLOrSemi();
@@ -346,8 +348,8 @@ public class Parser {
         // Apply TLO. Similar to cutter comp.
         // Takes the form
         // G43 [Zx.xx] Hn
-        if (startToken.i == 43) answer.type = StxP.G43;
-        if (startToken.i == 44) answer.type = StxP.G44;
+        if (startToken.i == 43) answer.type = Statement.G43;
+        if (startToken.i == 44) answer.type = Statement.G44;
         DataTLO data = new DataTLO();
         
         // See if there's an optional Z value.
@@ -363,7 +365,7 @@ public class Parser {
         // Now there must be an H value
         if (next.letter != 'H')
           {
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,
                 "G43/G44 not followed by H register");
             readToEOLOrSemi();
@@ -375,7 +377,7 @@ public class Parser {
       } // end TLO
     else if (startToken.i == 49)
       // Cancel TLO.  
-      answer.type = StxP.G49;
+      answer.type = Statement.G49;
     else if (startToken.i == 52)
       {
         // Temporary change in PRZ (or return to original). This must
@@ -383,7 +385,7 @@ public class Parser {
         // object for these coordinates, even though the F-value is unused.
         // It would usually (I guess) be an error not to have X and Y, but I
         // assume that if any of these is omitted, it must not be changed.
-        answer.type = StxP.G52;
+        answer.type = Statement.G52;
         
         boolean xDefined = false;
         boolean yDefined = false;
@@ -428,7 +430,7 @@ public class Parser {
                 if (xDefined == true)
                   {
                     // Error. Already read this value.
-                    answer.type = StxP.ERROR;
+                    answer.type = Statement.ERROR;
                     answer.error = formError(answer.lineNumber,"two x-values");
                     readToEOLOrSemi();
                     return;
@@ -441,7 +443,7 @@ public class Parser {
                 if (yDefined == true)
                   {
                     // Error. Already read this value.
-                    answer.type = StxP.ERROR;
+                    answer.type = Statement.ERROR;
                     answer.error = formError(answer.lineNumber,"two y-values");
                     readToEOLOrSemi();
                     return;
@@ -454,7 +456,7 @@ public class Parser {
                 if (zDefined == true)
                   {
                     // Error. Already read this value.
-                    answer.type = StxP.ERROR;
+                    answer.type = Statement.ERROR;
                     answer.error = formError(answer.lineNumber,"two z-values");
                     readToEOLOrSemi();
                     return;
@@ -474,54 +476,51 @@ public class Parser {
     else if ((startToken.i >= 54) && (startToken.i <= 59))
       {
         // Work offsets.
-        if (startToken.i == 54) answer.type = StxP.G54;
-        if (startToken.i == 55) answer.type = StxP.G55;
-        if (startToken.i == 56) answer.type = StxP.G56;
-        if (startToken.i == 57) answer.type = StxP.G57;
-        if (startToken.i == 58) answer.type = StxP.G58;
-        if (startToken.i == 59) answer.type = StxP.G59;
+        if (startToken.i == 54) answer.type = Statement.G54;
+        if (startToken.i == 55) answer.type = Statement.G55;
+        if (startToken.i == 56) answer.type = Statement.G56;
+        if (startToken.i == 57) answer.type = Statement.G57;
+        if (startToken.i == 58) answer.type = Statement.G58;
+        if (startToken.i == 59) answer.type = Statement.G59;
       }
     else if (startToken.i == 90)
       // Absolute mode.
-      answer.type = StxP.G90;
+      answer.type = Statement.G90;
     else if (startToken.i == 91)
       // Incremental mode.
-      answer.type = StxP.G91;
+      answer.type = Statement.G91;
     else
       {
         // Catch any G-code that is not handled above and flag it as an error.
-        answer.type = StxP.ERROR;
+        answer.type = Statement.ERROR;
         answer.error = formError(answer.lineNumber,
             "unknown G-code: " +startToken.i);
         readToEOLOrSemi();
       }
   }
 
-  private void parseMCode(StxP answer,Token startToken) {
+  private void parseMCode(Statement answer,Token startToken) {
     
     // Have already read the M-something token. Read anything else needed to 
     // form a complete statement.
     if (startToken.i == 0)
       // Program Stop. Treated as a hard stop.
-      answer.type = StxP.M00;
+      answer.type = Statement.M00;
     else if (startToken.i == 1)
       // Program stop. I think this is an optional stop.
-      answer.type = StxP.M01;
-    else if (startToken.i == 2)
-      // Program end.
-      answer.type = StxP.M02;
+      answer.type = Statement.M01;
     else if (startToken.i == 3)
       {
         // Spindle start, clockwise. Requires S-token for RPM.
         Token rpm = getToken();
         if (rpm.letter != 'S')
           {
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,"bad spindle speed");
             readToEOLOrSemi();
             return;
           }
-        answer.type = StxP.M03;
+        answer.type = Statement.M03;
         answer.data = new DataInt(rpm.i);
       }
     else if (startToken.i == 4)
@@ -530,57 +529,54 @@ public class Parser {
         Token rpm = getToken();
         if (rpm.letter != 'S')
           {
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,"bad spindle speed");
             readToEOLOrSemi();
             return;
           }
-        answer.type = StxP.M04;
+        answer.type = Statement.M04;
         answer.data = new DataInt(rpm.i);
       }
     else if (startToken.i == 5)
         // Spindle off
-        answer.type = StxP.M05;
+        answer.type = Statement.M05;
     else if (startToken.i == 6)
       {
         // Tool change. This should be followed by a T-token.
         Token tool = getToken();
         if (tool.letter != 'T')
           {
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,
                 "bad tool change (M06 T?)");
             readToEOLOrSemi();
             return;
           }
-        answer.type = StxP.M06;
+        answer.type = Statement.M06;
         answer.data = new DataInt(tool.i);
       }
     else if ((startToken.i == 7) || (startToken.i == 8) || (startToken.i == 9))
       {
         // Coolant on/off. Pass it on even though it will be ignored.
-        if (startToken.i == 7) answer.type = StxP.M07;
-        if (startToken.i == 8) answer.type = StxP.M08;
-        if (startToken.i == 9) answer.type = StxP.M09;
+        if (startToken.i == 7) answer.type = Statement.M07;
+        if (startToken.i == 8) answer.type = Statement.M08;
+        if (startToken.i == 9) answer.type = Statement.M09;
       }
     else if (startToken.i == 30)
       // End of program.
-      answer.type = StxP.M30;
+      answer.type = Statement.M30;
     else if ((startToken.i == 40) || (startToken.i == 41))
       {
         // Spindle high/low.
-        if (startToken.i == 40) answer.type = StxP.M40;
-        if (startToken.i == 41) answer.type = StxP.M41;
+        if (startToken.i == 40) answer.type = Statement.M40;
+        if (startToken.i == 41) answer.type = Statement.M41;
       }
-    else if (startToken.i == 47)
-      // Repeat program
-      answer.type = StxP.M47;
     else if (startToken.i == 48)
       // Enable overrides.
-      answer.type = StxP.M48;
+      answer.type = Statement.M48;
     else if (startToken.i == 49)
       // Disable overrides.
-      answer.type = StxP.M49;
+      answer.type = Statement.M49;
     else if (startToken.i == 98)
       {
         // Call subprogram. The format here should be M98 P[###] L[###], where 
@@ -589,7 +585,7 @@ public class Parser {
         Token P = getToken();
         if (P.letter != 'P')
           {
-            answer.type = StxP.ERROR;
+            answer.type = Statement.ERROR;
             answer.error = formError(answer.lineNumber,
                 "bad subroutine call (M98 P?)");
             readToEOLOrSemi();
@@ -620,49 +616,49 @@ public class Parser {
             call.returnChar = P.endCount;
           }
         
-        answer.type = StxP.M98;
+        answer.type = Statement.M98;
       } // end M98 (call subroutine)
     else if (startToken.i == 99)
       // Return from subprogram
-      answer.type = StxP.M99;
+      answer.type = Statement.M99;
     else
       {
-        answer.type = StxP.ERROR;
+        answer.type = Statement.ERROR;
         answer.error = formError(answer.lineNumber,
             "unknown M-code: M" +startToken.i);
         readToEOLOrSemi();
       }
   }
 
-  private void parseNCode(StxP answer,Token startToken) {
+  private void parseNCode(Statement answer,Token startToken) {
     
     // Line number.
     // BUG: THis shouldn't be possible. They're tossed by readWhite().
-    answer.type = StxP.LINE;
+    answer.type = Statement.LINE;
     answer.data = new DataInt(startToken.i);
   }
   
-  private void parseOCode(StxP answer,Token startToken) {
+  private void parseOCode(Statement answer,Token startToken) {
     
     // Program number. When a sub-program is called, we will need to know
     // the character and line to which the program will be jumping to
     // execute that sub-program. This is the position immediately *after*
     // the O### statement -- the position of the start of the next statement
     // after the O### statement.
-    answer.type = StxP.PROG;
+    answer.type = Statement.PROG;
     
     DataSubProg data = new DataSubProg();
     data.progNumber = startToken.i;
     answer.data = data;
   }
   
-  private void parseXYZ(StxP answer,Token startToken) {
+  private void parseXYZ(Statement answer,Token startToken) {
     
     // Have just read an X, Y or Z token (in startToken). Read to the end of the
     // move. The form of a general statement of this type is
     // [X#][Y#][Z#][F#]. The statement is considered complete as soon as either 
     // an F or anything other than X,Y,Z,F is read.
-    answer.type = StxP.MOVE;
+    answer.type = Statement.MOVE;
     boolean xDefined = false;
     boolean yDefined = false;
     boolean zDefined = false;
@@ -701,7 +697,7 @@ public class Parser {
             if (xDefined == true)
               {
                 // Error. Already read this value.
-                answer.type = StxP.ERROR;
+                answer.type = Statement.ERROR;
                 answer.error = formError(answer.lineNumber,"two x-values");
                 readToEOLOrSemi();
                 return;
@@ -714,7 +710,7 @@ public class Parser {
             if (yDefined == true)
               {
                 // Error. Already read this value.
-                answer.type = StxP.ERROR;
+                answer.type = Statement.ERROR;
                 answer.error = formError(answer.lineNumber,"two y-values");
                 readToEOLOrSemi();
                 return;
@@ -727,7 +723,7 @@ public class Parser {
             if (zDefined == true)
               {
                 // Error. Already read this value.
-                answer.type = StxP.ERROR;
+                answer.type = Statement.ERROR;
                 answer.error = formError(answer.lineNumber,"two z-values");
                 readToEOLOrSemi();
                 return;
@@ -754,10 +750,10 @@ public class Parser {
                                 xValue,yValue,zValue,fValue);
   }
   
-  private StxP readStatement() {
+  private Statement readStatement() {
     
     // Read and return one complete Statement.
-    StxP answer = new StxP(StxP.UNKNOWN);
+    Statement answer = new Statement(Statement.UNKNOWN);
     
     // This also reads past any ';' or 'N' tokens.
     readWhite();
@@ -770,10 +766,10 @@ public class Parser {
     
     switch (curToken.letter)
       {
-        case Token.ERROR  : answer.type = StxP.ERROR;
+        case Token.ERROR  : answer.type = Statement.ERROR;
                             answer.error = curToken.error;
                             return answer;
-        case Token.EOF    : answer.type = StxP.EOF;
+        case Token.EOF    : answer.type = Statement.EOF;
                             return answer;
         
         // These are the cases where (we hope) things are going normally.
@@ -799,7 +795,7 @@ public class Parser {
         // Any other letter that appears here is an error. These tokens
         // should not be "bare."
         default :
-          answer.type = StxP.ERROR;
+          answer.type = Statement.ERROR;
           answer.error = formError(answer.lineNumber,
               "unexpected command -- " +curToken.letter);
           readToEOLOrSemi();
@@ -808,17 +804,42 @@ public class Parser {
   }
   
  
-  
-  public static ArrayList<StxP> process(String gCode) {
+
+  public static ArrayList<Statement> process(String gCode) {
     
     // Convert the entire G-code program to an array of statements.
-    ArrayList<StxP> answer = new ArrayList<>();
+    // BUG: Get rid of. Using linked lists.
+    ArrayList<Statement> answer = new ArrayList<>();
     
     Parser p = new Parser(Lexer.process(gCode));
     
-    StxP s = p.readStatement();
+    Statement s = p.readStatement();
     
-    while (s.type != StxP.EOF)
+    while (s.type != Statement.EOF)
+      {
+        answer.add(s);
+        s = p.readStatement();
+      }
+    
+    return answer;
+  }
+  
+  public static LList<Statement> processToLL(String gCode) {
+    
+    // BUG: Rename without "ToLL"
+    
+    // Convert the entire G-code program to a linked list of statements.
+    LList<Statement> answer = new LList<>();
+    
+    // BUG: Testing
+    ArrayList<Token> toks = Lexer.process(gCode);
+    Parser p = new Parser(toks);
+    
+//    Parser p = new Parser(Lexer.process(gCode));
+    
+    Statement s = p.readStatement();
+    
+    while (s.type != Statement.EOF)
       {
         answer.add(s);
         s = p.readStatement();
@@ -831,11 +852,12 @@ public class Parser {
     
     // Take the given g-code and feed it through, producing a single String
     // suitable for output to the user, or for use with unit tests.
-    ArrayList<StxP> theStatements = process(gcode);
+    // BUG: Still used??
+    ArrayList<Statement> theStatements = process(gcode);
 
     StringBuffer answer = new StringBuffer();
     
-    for (StxP s : theStatements)
+    for (Statement s : theStatements)
       {
         answer.append(s.toString());
         answer.append("\n");
