@@ -1,19 +1,19 @@
 package vcnc.tpile;
 
 
-import vcnc.Statement;
+import vcnc.tpile.Statement;
 import vcnc.tpile.parse.StatementData;
 
 
 abstract public class ToolCurve {
 
   // Every curve has a start point (x0,y0,z0) and an end point (x1,y1,z1).
-  public double x0;
-  public double y0;
-  public double z0;
-  public double x1;
-  public double y1;
-  public double z1;
+  public double x0 = 0.0;
+  public double y0 = 0.0;
+  public double z0 = 0.0;
+  public double x1 = 0.0;
+  public double y1 = 0.0;
+  public double z1 = 0.0;
   
   
   public ToolCurve() {
@@ -44,12 +44,19 @@ abstract public class ToolCurve {
   
   // Take this ToolCurve, and convert it to either a MoveState or a
   // CircularState. That's what the interpreter works with.
+  // BUG: Do I really need this? Can't it just be part of toStatement()?
   public abstract StatementData toState();
   
   // Similar to toState(), but also fills in the type.
   public abstract void toStatement(Statement cmd);
+  public abstract Statement toStatement();
 
   
+//  public static double dist(double x1,double y1,double x2,double y2) {
+//    
+//    // To save typing.
+//    return Math.sqrt((x1-y1)*(x1-y1) + (x2-y2)*(x2-y2));
+//  }
   
 //double ToolCurve::dist(double u0,double v0,double u1,double v1)
 //{

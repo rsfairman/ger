@@ -1,0 +1,82 @@
+
+(To test the Parser class.
+This thing is *loaded* with errors, and it might make sense to
+break it up. )
+
+(Some bare tokens that shouldn't appear as such)
+D8
+F23.19
+
+(should be ok)
+G00 X7.4 Y3.3
+
+(not OK)
+G00 X7..3 Y2.22
+
+(no G value is ok)
+X8.5 Z2.2
+
+(What if you use lower-case?)
+x4 y3
+
+(something else that shouldn't be bare)
+R33.9
+
+(something to die on)
+Q8
+
+(something weird)
+^&4
+
+(various G02/03 commands)
+G02 X14 Y8 Z3 I7 J9 K3 R8 F19
+G03 X14 Z8 Y3 I7 J9 K3 R8 F19
+G02 X1 Y1 Z1 R17 F4
+G03 X1 Y1 Z1
+G02 X1 Y1 Z1 I4 J8 K9
+G02 X1 Y1 Z1 I4 J8 F11
+G02 X1 Y1 Z1 I4 J8 R2
+G03 X11 X9 Y4 R4
+
+(Cutter comp problems)
+G41 G01 X1 Y1
+G41 D202
+G42 H-17
+G41 H3
+G42 D7
+
+(TLO tests)
+G43 Z14.4 H9
+G44 H8
+G43 H-44
+G44 D9
+
+(Work offsets)
+G52
+G52 X9
+G52 Y17 X9
+G52 X1 Y1 Z1
+G52 X9 X8 Y4
+
+(Stuff we ignore)
+G89 X9 X8 X8 X8 P14 L8 O9 R45
+G72
+
+
+(M-codes)
+M03 S17.4
+M04 S8000
+
+M06 T800
+M06
+M04 S1000
+M04 T9
+
+M98
+M98 P15 L7
+M98 M100
+M04 S1000
+
+
+
+

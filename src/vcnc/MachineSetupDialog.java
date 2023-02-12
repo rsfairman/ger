@@ -32,27 +32,36 @@ import javax.swing.JDialog;
 import javax.swing.SpringLayout;
 
 import vcnc.persist.Persist;
-import vcnc.tpile.MachineState;
+import vcnc.tpile.DefaultMachine;
 
 import javax.swing.JTabbedPane;
 
 
 class MachineSetupDialog extends JDialog implements ActionListener {
 
-  private static float grayLevel = 0.6f;
+  // For some reason the background colors of the various parts don't seem to
+  // match by default so they are explicitly set to this.
+  private static float grayLevel = 0.9f;
   private static Color myGray = new Color(grayLevel,grayLevel,grayLevel);
 
   // The user's choices in the dialog are stored here while the dialog
   // is open. It's a copy of the relevant items in the MachineState global,
   // and is needed in case the user cancels his changes.
   
+  // BUG: Get rid of this. Nice idea, but...
   class TempMachineState {
    
    boolean machineInchUnits = true;
-     
+   
   }
   
   private TempMachineState tempState = new TempMachineState();
+  
+  
+  WorkOffsetsTab woTab = null;
+  
+  
+  
   
   
   public MachineSetupDialog(Frame parent) {
@@ -62,9 +71,11 @@ class MachineSetupDialog extends JDialog implements ActionListener {
     
     // Copy the relevant items from the static MachineSettings to the 
     // temporary copy used here.
+    Persist.reload();
+    
     // BUG: Not doing tool turret or workoffsets yet. Those classes
-    // will need some kind of deep copy method.
-    tempState.machineInchUnits = MachineState.machineInchUnits;
+    // will need some kind of deep copy method. Will they?
+    tempState.machineInchUnits = DefaultMachine.inchUnits;
     
     // The GUI layout...
     // BUG: Looks like I need to set the background colors for all the
@@ -78,6 +89,7 @@ class MachineSetupDialog extends JDialog implements ActionListener {
     // This is partly due to the fact that the JTextArea for the reminder
     // should be centered, and that's easiest with GridBagLayout.
     JPanel unitPanel = new JPanel();
+    unitPanel.setBackground(myGray);
     unitPanel.setLayout(new GridBagLayout());
     GridBagConstraints gridCon = new GridBagConstraints();
     gridCon.gridx = GridBagConstraints.VERTICAL;
@@ -86,19 +98,25 @@ class MachineSetupDialog extends JDialog implements ActionListener {
         "\nThe inch/mm choice applies to all values that appear in the\n" +
         "tool table or the work offsets table. The simulated machine\n" +
         "also starts in the given mode (inch or mm, for G20 or G21)\n" +
-        "and it will translate to code expressed in those units.\n");
+        "and it will translate to code expressed in those units.\n\n" +
+        "These changes persist over all future runs. Use machine\n" +
+        "directives to make temporary per-program changes.\n");
+    msg.setBackground(myGray);
     msg.setEditable(false);
     msg.setBackground(myGray);
     unitPanel.add(msg,gridCon);
     
     JPanel radioPanel = new JPanel();
+    radioPanel.setBackground(myGray);
     radioPanel.setLayout(new BoxLayout(radioPanel,BoxLayout.Y_AXIS));
     
     ButtonGroup radioGroup = new ButtonGroup();
     
     JRadioButton inchBut = new JRadioButton("inch",true);
+    inchBut.setBackground(myGray);
     inchBut.addActionListener(this);
     JRadioButton mmBut = new JRadioButton("mm",false);
+    mmBut.setBackground(myGray);
     mmBut.addActionListener(this);
 
     radioPanel.add(inchBut);
@@ -119,12 +137,16 @@ class MachineSetupDialog extends JDialog implements ActionListener {
     
     // Now, the primary area for input: the tables.
     JTabbedPane theTabs = new JTabbedPane();
-    theTabs.add("Work Offsets",new WorkOffsetsTab());
-    theTabs.add("Tool Table",new ToolTableTab());
+//    theTabs.setBackground(myGray);
+    
+    this.woTab = new WorkOffsetsTab(myGray);
+    theTabs.add("Work Offsets",woTab);
+    theTabs.add("Tool Table",new ToolTableTab(myGray));
     this.getContentPane().add(theTabs,"Center");
     
     // The OK/Cancel buttons.
     JPanel exitPanel = new JPanel();
+    exitPanel.setBackground(myGray);
     
     JButton but = new JButton("OK");
     but.addActionListener(this);
@@ -157,26 +179,16 @@ class MachineSetupDialog extends JDialog implements ActionListener {
       {
         // User wants to save his changes. 
         
-        /*
-        // Pull everything out of the table
-        // and put it into this.theOffsets so that the caller can see his choices.
-        for (int i = 0; i < theOffsets.offset.length; i++)
-          {
-            Double d = (Double) theModel.getValueAt(i+1,1);
-            theOffsets.offset[i][0] = d;
-
-            d = (Double) theModel.getValueAt(i+1,2);
-            theOffsets.offset[i][1] = d;
-
-            d = (Double) theModel.getValueAt(i+1,3);
-            theOffsets.offset[i][2] = d;
-          }
-          */
+        System.out.println("will save changes");
+        
+        // Pull everything out of the table and save it to the initial machine
+        // settings.
+        woTab.extract();
+          
         
         // Make the temporary choices permanent.
-        // BUG: Not doing tool turret or work offsets. Note that a deep
-        // copy will not be needed in this case.
-        MachineState.machineInchUnits = this.tempState.machineInchUnits;
+        // BUG: Not doing tool turret yet. Note that a deep will be needed.
+        DefaultMachine.inchUnits = this.tempState.machineInchUnits;
         
         // And save the changes to disk.
         Persist.save();

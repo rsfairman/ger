@@ -424,7 +424,18 @@ might want different files for different cases. The best solution
 might be for there to be a default location for the settings file, but
 allow the user to choose another file.
 
-\section{August 8, 2022}
+\section{November 21, 2022}
+
+All the layers are in place, including the basic wizard
+framework. Most of the machine setup stuff hasn't been done (e.e., tool
+table) and none of the rendering.
+
+Now that the bulk of the code is there, I've started going back and
+cleaning things up. One UI thing is toggling line numbers. I have
+something that sort of works, but it's buggy. What I want is something
+that acts almost identically to {\tt JTextArea}, but with the ability
+to toggle line numbers.
+
 \section{August 8, 2022}
 \section{August 8, 2022}
 \section{August 8, 2022}

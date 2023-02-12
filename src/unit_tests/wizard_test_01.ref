@@ -1,5 +1,5 @@
 N00012	G00
-N00013	X+01.000	Y+01.000	F14.00
+N00013	ERROR	Error on line 13: feed rate given in rapid travel mode
 N00000	G01
 N00000	X+03.000			F40.00
 N00000	G00

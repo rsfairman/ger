@@ -2,16 +2,17 @@ package vcnc;
 
 /*
 
-Used with the machine setup dialog for the workoffsets table.
+Used with the machine setup dialog for the work offsets table.
 
 */
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-import vcnc.tpile.MachineState;
+import vcnc.tpile.DefaultMachine;
 
 import vcnc.workoffsets.WorkOffsets;
 import vcnc.workoffsets.WOTable;
@@ -26,12 +27,13 @@ class WorkOffsetsTab extends JScrollPane {
   private WOTableModel theModel = null;
   
   
-  public WorkOffsetsTab() {
+  public WorkOffsetsTab(Color bColor) {
     
     //JTextArea test = new JTextArea("blah blah");
 //    this.getViewport().add(test);
+//    this.setBackground(bColor);
     
-    theOffsets = MachineState.workOffsets;
+    theOffsets = DefaultMachine.workOffsets.deepCopy();
     
 
     //this.getContentPane().setLayout(new BorderLayout(10,10));
@@ -54,6 +56,7 @@ class WorkOffsetsTab extends JScrollPane {
     
 //    JScrollPane tablePane = new JScrollPane(theTable);
     this.getViewport().add(theTable);
+    this.getViewport().setBackground(bColor);
     //this.getContentPane().add(tablePane,"Center");
     
 //    JTextArea fixup = new JTextArea(
@@ -64,6 +67,13 @@ class WorkOffsetsTab extends JScrollPane {
 //    fixup.setEditable(false);
 
 //    this.pack();
+  }
+  
+  public void extract() {
+    
+    // Called when the user hits "OK" to pull the data out of the dialog
+    // and make it a permanent part of the initial machine settings.
+    theModel.extract();
   }
 
 }

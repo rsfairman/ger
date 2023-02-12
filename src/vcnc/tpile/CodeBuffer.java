@@ -2,9 +2,6 @@ package vcnc.tpile;
 
 /*
 
-BUG: This might no longer serve any purpose...
-
-
 Use this to create a buffered interface to a String. The built-in StringBuffer 
 class sounds like the thing to use, making this redundant, but StringBuffer
 has a *mutable* sequence of characters. The built-in StringReader class is 
@@ -18,7 +15,9 @@ using String.charAt(), which is much simpler. The downside is that it may
 be that charAt() is slower than getting larger blocks of characters from
 the String. It depends on how Java defines Strings internally
 and how charAt() is implemented. Realistically, this shouldn't make a big
-difference either way, so go with the shorter/simpler code. 
+difference either way, so go with the shorter/simpler code.
+
+NOTE: I'm not keen on this class. There should be a better way.
 
 */
 

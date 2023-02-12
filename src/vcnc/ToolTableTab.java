@@ -1,7 +1,7 @@
 package vcnc;
 
-import javax.swing.BorderFactory;
-import javax.swing.JLabel;
+import java.awt.Color;
+
 
 /*
 
@@ -9,13 +9,17 @@ Used with the machine setup dialog for the tool table.
 
 */
 
+import java.awt.Color;
+
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
 
 import vcnc.tooltable.ToolTable;
 import vcnc.tooltable.ToolTableModel;
 import vcnc.tooltable.ToolTurret;
-import vcnc.tpile.MachineState;
+import vcnc.tpile.DefaultMachine;
 import vcnc.workoffsets.WOTable;
 import vcnc.workoffsets.WOTableModel;
 import vcnc.workoffsets.WorkOffsets;
@@ -28,12 +32,12 @@ class ToolTableTab extends JScrollPane {
   private ToolTableModel theModel = null;
   
   
-  public ToolTableTab() {
+  public ToolTableTab(Color bColor) {
     
     //JTextArea test = new JTextArea("blah blah");
 //    this.getViewport().add(test);
     
-    turret = MachineState.turret;
+    turret = DefaultMachine.turret;
 
     //this.theModel = new ToolTableModel(tools);
     this.theModel = new ToolTableModel(turret);
@@ -43,6 +47,8 @@ class ToolTableTab extends JScrollPane {
     
 //    JScrollPane tablePane = new JScrollPane(theTable);
 //    this.getContentPane().add(tablePane,"Center");
+
+    this.getViewport().setBackground(bColor);
     
     JTextArea fixup = new JTextArea(
         "\nFor now, because it's a lot of trouble to make this look slick, "+

@@ -3,7 +3,7 @@ package vcnc.tpile.parse;
 /*
 
 Converts G-code to a series of statement objects. Each statement is a self-
-contained G-code "command," including the possibility of wizards commands.
+contained G-code "command," including the possibility of wizard commands.
 
 This creates a Lexer and consumes Token objects from it.
  
@@ -70,16 +70,13 @@ public class Parser {
   private void readToEOLOrSemi() {
     
     // Read from the current token to the EOL, trashing these tokens.
-    // This is used for a few things, like G04 (dwell) that the program ignores.
-    // Instead of trying to parse them, we just read everything that might have
-    // anything to do with it, and send it to the trash. This is also used when
+    // This *was* used for tokens that were accepted and ignored, like 
+    // G04 (dwell) that the program ignores. Things are now set up not
+    // to accept codes that the program doesn't know what to do with.
+    // Anyway, call this when you hit something you don't know what to do
+    // with. This reads everything that might have anything to do with it
+    // the problem, and sends it to the trash. This is typically used when
     // an error is detected, as a way of trying to move beyond the end of it.
-    
-    // BUG: NO, DON'T TRASH THINGS YOU DON'T UNDERSTAND (YET). THEY SHOULD PASS
-    // THROUGH UNCHANGED. ESSENTIALLY, THESE THINGS SHOULD EXTEND TO THE EOL,
-    // AND JUST ACCEPT THAT THEY ARE VALID TO WHATEVER MACHINE IS THE FINAL
-    // CONSUMER.
-    // SO BE CAREFUL WHERE THIS IS CALLED
     Token peek = peekToken();
     while (peek.letter != Token.EOL)
       {
@@ -122,7 +119,7 @@ public class Parser {
     
     return;
   }
-  
+   
   private void parseGCode(Statement answer,Token startToken) {
     
     // Have already read the G-something token. Read anything else needed to 
@@ -306,8 +303,6 @@ public class Parser {
       answer.type = Statement.G20;
     else if (startToken.i == 21)
       answer.type = Statement.G21;
-    else if (startToken.i == 28)
-      answer.type = Statement.G28;
     else if (startToken.i == 40)
       // Cancel cutter comp.
       answer.type = Statement.G40;
@@ -380,11 +375,11 @@ public class Parser {
       answer.type = Statement.G49;
     else if (startToken.i == 52)
       {
-        // Temporary change in PRZ (or return to original). This must
-        // be followed by some X Y and Z values. This uses a MoveState
-        // object for these coordinates, even though the F-value is unused.
-        // It would usually (I guess) be an error not to have X and Y, but I
-        // assume that if any of these is omitted, it must not be changed.
+        // Temporary change in PRZ (or return to original). This may be
+        // given as a bare G52, with no arguments, or it could be followed
+        // by X/Y/Z values. Basically, every potential argument defaults
+        // to zero. This uses a MoveState object for these coordinates, even
+        // though the F-value is unused.
         answer.type = Statement.G52;
         
         boolean xDefined = false;
@@ -394,31 +389,6 @@ public class Parser {
         double yValue = 0.0;
         double zValue = 0.0;
         
-        Token nextToken = getToken();
-        if (startToken.letter == 'X')
-          {
-            xDefined = true;
-            xValue = startToken.d;
-          }
-        else if (startToken.letter == 'Y')
-          {
-            yDefined = true;
-            yValue = startToken.d;
-          }
-        else  if (startToken.letter == 'Z')
-          {
-            zDefined = true;
-            zValue = startToken.d;
-          }
-        else
-          {
-            answer.error = formError(answer.lineNumber,
-                "G52 not followed by coordinates");
-            readToEOLOrSemi();
-            return;
-          }
-        
-        // Continue for up to two more letters.
         Token peekToken = peekToken();
         while ((peekToken.letter == 'X') || (peekToken.letter == 'Y') || 
             (peekToken.letter == 'Z'))
@@ -442,7 +412,6 @@ public class Parser {
               {
                 if (yDefined == true)
                   {
-                    // Error. Already read this value.
                     answer.type = Statement.ERROR;
                     answer.error = formError(answer.lineNumber,"two y-values");
                     readToEOLOrSemi();
@@ -455,7 +424,6 @@ public class Parser {
               {
                 if (zDefined == true)
                   {
-                    // Error. Already read this value.
                     answer.type = Statement.ERROR;
                     answer.error = formError(answer.lineNumber,"two z-values");
                     readToEOLOrSemi();
@@ -489,6 +457,72 @@ public class Parser {
     else if (startToken.i == 91)
       // Incremental mode.
       answer.type = Statement.G91;
+    else if (startToken.i == 92)
+      {
+        // Very similar to G92.
+        // BUG: In fact, combine them somehow. Note also that parseXYZF() is
+        // almost the same thing as well.
+        answer.type = Statement.G92;
+        
+        boolean xDefined = false;
+        boolean yDefined = false;
+        boolean zDefined = false;
+        double xValue = 0.0;
+        double yValue = 0.0;
+        double zValue = 0.0;
+        
+        Token peekToken = peekToken();
+        while ((peekToken.letter == 'X') || (peekToken.letter == 'Y') || 
+            (peekToken.letter == 'Z'))
+          {
+            // Go ahead and get it instead of just peeking.
+            peekToken = getToken();
+            if (peekToken.letter == 'X')
+              {
+                if (xDefined == true)
+                  {
+                    // Error. Already read this value.
+                    answer.type = Statement.ERROR;
+                    answer.error = formError(answer.lineNumber,"two x-values");
+                    readToEOLOrSemi();
+                    return;
+                  }
+                xDefined = true;
+                xValue = peekToken.d;
+              }
+            else if (peekToken.letter == 'Y')
+              {
+                if (yDefined == true)
+                  {
+                    answer.type = Statement.ERROR;
+                    answer.error = formError(answer.lineNumber,"two y-values");
+                    readToEOLOrSemi();
+                    return;
+                  }
+                yDefined = true;
+                yValue = peekToken.d;
+              }
+            else
+              {
+                if (zDefined == true)
+                  {
+                    answer.type = Statement.ERROR;
+                    answer.error = formError(answer.lineNumber,"two z-values");
+                    readToEOLOrSemi();
+                    return;
+                  }
+                zDefined = true;
+                zValue = peekToken.d;
+              }
+            
+            // Peek to the next one.
+            peekToken = peekToken();
+          }
+        
+        // Statement has been read. Combine the data into a single object.
+        answer.data = new DataMove(xDefined,yDefined,zDefined,false,
+                                    xValue,yValue,zValue,0.0);
+      } // end G92
     else
       {
         // Catch any G-code that is not handled above and flag it as an error.
@@ -598,7 +632,6 @@ public class Parser {
         // Note: I used a double because I think that P can mean other things 
         // too on some machines.
         call.programNumber = (int) P.d;
-        call.returnChar = P.endCount;
         
         // This might be followed by an L-value.
         Token L = peekToken();
@@ -606,15 +639,10 @@ public class Parser {
           {
             L = getToken();
             call.invocations = L.i;
-            call.returnChar = L.endCount;
           }
         else
-          {
-            // If there is no L-value, then I assume a single invocation.
-            // The returnIndex was already set to be just after the P-value.
-            call.invocations = 1;
-            call.returnChar = P.endCount;
-          }
+          // If there is no L-value, then I assume a single invocation.
+          call.invocations = 1;
         
         answer.type = Statement.M98;
       } // end M98 (call subroutine)
@@ -628,14 +656,6 @@ public class Parser {
             "unknown M-code: M" +startToken.i);
         readToEOLOrSemi();
       }
-  }
-
-  private void parseNCode(Statement answer,Token startToken) {
-    
-    // Line number.
-    // BUG: THis shouldn't be possible. They're tossed by readWhite().
-    answer.type = Statement.LINE;
-    answer.data = new DataInt(startToken.i);
   }
   
   private void parseOCode(Statement answer,Token startToken) {
@@ -652,7 +672,7 @@ public class Parser {
     answer.data = data;
   }
   
-  private void parseXYZ(Statement answer,Token startToken) {
+  private void parseXYZF(Statement answer,Token startToken) {
     
     // Have just read an X, Y or Z token (in startToken). Read to the end of the
     // move. The form of a general statement of this type is
@@ -762,7 +782,6 @@ public class Parser {
     // incoming Tokens to a statement.
     Token curToken = getToken();
     answer.lineNumber = curToken.lineNumber;
-    answer.charNumber = curToken.characterCount;
     
     switch (curToken.letter)
       {
@@ -777,17 +796,13 @@ public class Parser {
                     return answer;
         case 'M'  : parseMCode(answer,curToken);
                     return answer;
-                    
-        // BUG: This shouldn't be possible. 'N' is tossed by readWhite().
-        case 'N'  : parseNCode(answer,curToken);
-                    return answer;
         case 'O'  : parseOCode(answer,curToken);
                     return answer;
         case 'X'  :
         case 'Y'  :
         case 'Z'  : // Handle these moves together. When these appear "bare," 
                     // they're assumed to be relative to the previous G0 or G1.
-                    parseXYZ(answer,curToken);
+                    parseXYZF(answer,curToken);
                     return answer;
         case '@'  : parseWizard(answer,curToken);
                     return answer;
@@ -803,39 +818,13 @@ public class Parser {
       }
   }
   
- 
-
-  public static ArrayList<Statement> process(String gCode) {
-    
-    // Convert the entire G-code program to an array of statements.
-    // BUG: Get rid of. Using linked lists.
-    ArrayList<Statement> answer = new ArrayList<>();
-    
-    Parser p = new Parser(Lexer.process(gCode));
-    
-    Statement s = p.readStatement();
-    
-    while (s.type != Statement.EOF)
-      {
-        answer.add(s);
-        s = p.readStatement();
-      }
-    
-    return answer;
-  }
-  
-  public static LList<Statement> processToLL(String gCode) {
-    
-    // BUG: Rename without "ToLL"
+  public static LList<Statement> process(String gCode) {
     
     // Convert the entire G-code program to a linked list of statements.
     LList<Statement> answer = new LList<>();
     
-    // BUG: Testing
     ArrayList<Token> toks = Lexer.process(gCode);
     Parser p = new Parser(toks);
-    
-//    Parser p = new Parser(Lexer.process(gCode));
     
     Statement s = p.readStatement();
     
@@ -848,23 +837,6 @@ public class Parser {
     return answer;
   }
 
-  public static String digestAll(String gcode) {
-    
-    // Take the given g-code and feed it through, producing a single String
-    // suitable for output to the user, or for use with unit tests.
-    // BUG: Still used??
-    ArrayList<Statement> theStatements = process(gcode);
-
-    StringBuffer answer = new StringBuffer();
-    
-    for (Statement s : theStatements)
-      {
-        answer.append(s.toString());
-        answer.append("\n");
-      }
-    
-    return answer.toString();
-  }
   
 }
 

@@ -29,10 +29,6 @@ public class DataRegister extends StatementData {
     else
       answer += "H";
     
-//    String temp;
-//    temp.sprintf("%02d",regValue);
-//    answer.append(temp);
-    
     answer += String.format("%02d",regValue);
     
     return answer;

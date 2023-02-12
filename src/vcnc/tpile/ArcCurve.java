@@ -1,26 +1,34 @@
 package vcnc.tpile;
 
-import vcnc.Statement;
+/*
+
+This is used in a few ways:
+* To verify that an arc move (G02/03) is geometrically possible. For example,
+  the given radius could be too small for the given end-points.
+* To convert a G02/03 to a standard form that uses I/J/K instead of a radius.
+* There are various methods here for calculations related to cutter comp.
+ 
+*/
+
+
+import vcnc.tpile.Statement;
 import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.StatementData;
 
 
 public class ArcCurve extends ToolCurve {
 
-
+  // As set by G17/18/19.
   public AxisChoice axis;
-  
-  // Due to the way G-code works, this may be negative *briefly* when the
-  // constructor is getting things set up. See calcCenter(), below.
-  public double radius;
-  
+
   // Direction of travel (CW or CCW).
   public boolean cw;
   
-  // The center of the circle. This isn't necessarily the
-  // geometric center. It's the center with respect to the motion
-  // of the tool. Thus, if cutting a helical arc in the XY-plane, then
-  // the z-value is irrelevant.
+  public double radius;
+  
+  // The center of the circle. This isn't necessarily the geometric center. 
+  // It's the center with respect to the motion of the tool. Thus, if cutting 
+  // a helical arc in the XY-plane, then the z-value is irrelevant.
   public double cx;
   public double cy;
   public double cz;
@@ -34,9 +42,164 @@ public class ArcCurve extends ToolCurve {
   public double a0;
   public double a1;
   
-  // The only reason I need this is to properly recreate the statement from
-  // which this curve was created.
+  // This is used to recreate the statement from which this arc was created.
   public double feedRate;
+  
+  
+  
+  public static ArcCurve factory(double x0,double y0,double z0,
+      AxisChoice axis,Statement cmd) throws Exception {
+    ;
+    // Pass the start-point of the arc as (x0,y0,z0), together with the
+    // reference plane and the Statement that specifies the arc.
+    //
+    // NOTE: I would prefer that this thing not throw, but it does seem
+    // easiest.
+    if ((cmd.type != Statement.G02) && (cmd.type != Statement.G03))
+      return null;
+
+    ArcCurve answer = new ArcCurve();
+    answer.axis = axis;
+    if (cmd.type == Statement.G02)
+      answer.cw = true;
+    else
+      answer.cw = false;
+    
+    // BUG: Change to just 'c' for variable name.
+    DataCircular theState = (DataCircular) cmd.data;
+    
+    // From the ToolCurve super-class: the start-point.
+    answer.x0 = x0;
+    answer.y0 = y0;
+    answer.z0 = z0;
+    
+    // And the end-point of the arc.
+    answer.x1 = x0;
+    if (theState.xDefined) answer.x1 = theState.X;
+    answer.y1 = y0;
+    if (theState.yDefined) answer.y1 = theState.Y;
+    answer.z1 = z0;
+    if (theState.zDefined) answer.z1 = theState.Z;
+    
+    // Determine the radius and center of the arc.
+    if (theState.rDefined == true)
+      {
+        answer.radius = theState.R;
+        
+        // Determining the center is trickier. This might throw for
+        // geometric reasons.
+        answer.calcCenter();
+        
+        // Now that we know the center, make sure the radius is positive.
+        // Negative radius is used to de...
+        answer.radius = Math.abs(answer.radius);
+      }
+    else
+      {
+        // The center is given by I/J/K. Conceptually simpler.
+        if (axis == AxisChoice.XY)
+          {
+            answer.cx = answer.x0;
+            if (theState.iDefined) 
+              answer.cx = x0 + theState.I;
+            answer.cy = y0;
+            if (theState.jDefined) 
+              answer.cy = y0 + theState.J;
+            
+            // Not relevant, but note anyway.
+            answer.cz = z0;
+            
+            // The center, as given in the code, might not be geometrically
+            // possible -- the distance to each of the two end-points could
+            // be slightly different. We use the larger of the two values,
+            // but we only allow them to be slightly different. We have
+            // to allow *some* difference since the exactly correct value
+            // might be an irrational number.
+            double rad0 = Math.sqrt(
+                (answer.cx-x0)*(answer.cx-x0) + (answer.cy-y0)*(answer.cy-y0));
+            double rad1 = Math.sqrt(
+                (answer.cx-answer.x1)*(answer.cx-answer.x1) + 
+                (answer.cy-answer.y1)*(answer.cy-answer.y1));
+              
+            // Make sure that these two radii are within 1% of each other.
+            // Since I compare to the sum of the radii, I allow 2% of that.
+            // I'm not sure if this is likely to be a problem. Maybe it
+            // should be tighter.
+            // NOTE: Ideally, when the arc is converted to cutter moves, this
+            // possible (likely!) rounding error should be considered. The 
+            // crucial thing is that the cutter end up at the final end-point.
+            if (Math.abs(rad0-rad1) / (rad0+rad1) > 0.02)
+              throw new Exception(
+                  "given end-points of arc not possible for the given center");
+            
+            // Use the larger of the two values for the radius.
+            if (rad0 > rad1)
+              answer.radius = rad0;
+            else
+              answer.radius = rad1;
+          }
+        else if (axis == AxisChoice.ZX)
+          {
+            // Here, the y-value is the odd man out.
+            answer.cx = x0;
+            if (theState.iDefined) 
+              answer.cx = x0 + theState.I;
+            answer.cy = y0;
+            answer.cz = z0;
+            if (theState.kDefined) 
+              answer.cz = z0 + theState.K;
+            
+            double rad0 = Math.sqrt(
+                (answer.cx-x0)*(answer.cx-x0) + (answer.cz-z0)*(answer.cz-z0));
+            double rad1 = Math.sqrt(
+                (answer.cx-answer.x1)*(answer.cx-answer.x1) + 
+                (answer.cz-answer.z1)*(answer.cz-answer.z1));
+            if (Math.abs(rad0-rad1) / (rad0+rad1) > 0.02)
+              throw new Exception(
+                  "given end-points of arc not possible for the given center");
+            
+            if (rad0 > rad1) answer.radius = rad0; else answer.radius = rad1;
+          }
+        else
+          {
+            // Must be YZ-plane and X is the odd one out.
+            answer.cx = x0;
+            answer.cy = y0;
+            if (theState.jDefined)
+              answer.cy = y0 + theState.J;
+            answer.cz = z0;
+            if (theState.kDefined) 
+              answer.cz = z0 + theState.K;
+            
+            double rad0 = Math.sqrt(
+                (answer.cy-y0)*(answer.cy-y0) + (answer.cz-z0)*(answer.cz-z0));
+            double rad1 = Math.sqrt(
+                (answer.cy-answer.y1)*(answer.cy-answer.y1) + 
+                (answer.cz-answer.z1)*(answer.cz-answer.z1));
+            if (Math.abs(rad0-rad1) / (rad0+rad1) > 0.02)
+              throw new Exception(
+                  "given end-points of arc not possible for the given center");
+            
+            if (rad0 > rad1) answer.radius = rad0; else answer.radius = rad1;
+          }
+      }
+    
+    answer.setAngles();
+    
+    answer.feedRate = theState.F;
+    
+    return answer;
+  }
+  
+
+  
+  
+  
+  
+  
+  // BUG: I pulled this out of old code and I'm not so sure about the stuff
+  // below. I think the constructors should all be private so that only
+  // the factory() is available.
   
   
   public  ArcCurve() {
@@ -223,6 +386,11 @@ public class ArcCurve extends ToolCurve {
     // for traveling along an arc CW (cw == true) or CCW (cw == false). 
     // This always returns a positive number in [0,2 pi]. This is as you
     // go from the position at angle a1 to the position at angle a2.
+    //
+    // This is confusing. If you start at a1 and move CW to a2, with
+    // a2 < a1, then you want the result to be negative. You moved through
+    // a positive angle of a1-a2, but you were moving CW, which is contrary
+    // the usual way angles are measured, so it should be negative.
     double answer = 0.0;
     if (cw == true)
       answer = 2.0 * Math.PI - (a2-a1);
@@ -239,148 +407,122 @@ public class ArcCurve extends ToolCurve {
   
   public void calcCenter() throws Exception {
     
-    // Assuming that the x_i/y_i/z_i values and the radius are known (and the 
-    // orientation, cw or ccw), determine the coordinates of the center. Also 
-    // need the axis since this isn't really the center; it's only the "center"
-    // as far as the G-code is concerned. For instance, in the XY-plane (G17), 
-    // you might have a change in Z (a helical cut), but the Z-coordinate is 
-    // irrelevant for the notion of center.
+    // Used in the case where the center is given implicitly from a given
+    // radius -- and *not* with I/J/K. It determines the center (cx,cy,cz)
+    // from the start-point, end-point, radius and orientation (cw or ccw).
+    // The axis is also needed since this isn't really the center; it's only
+    // the "center" as far as the G-code is concerned. For instance, in the 
+    // XY-plane (G17), you might have a change in Z (for a helical cut), but 
+    // the Z-coordinate is irrelevant for the notion of center intended here.
     //
-    // There are two possible centers; which one is the right one depends on 
-    // the orientation. Conceptually, you have two circles, one centered about 
-    // (x0,y0) and the other about (x1,y1). They intersect at two places, and
-    // these are the two possible centers. You could try to solve the problem 
-    // by thinking of these two circles. The circles are given by
-    // (x-x0)^2 + (y-y0)^2 = r^2 = (x-x1)^2 + (y-y1)^2   (**)
-    // Now, solve for (x,y). But that is hairy. In fact, it's kind of a mystery
-    // how I got the formulas below. I messed around with (**) and I think I
-    // could reproduce the formulas below, but it's not easy. I think it 
-    // requires some magically known substitutions. In particular, start with 
-    // u = x - x1 and v = y - y1. The formulas do work in the sense that if you 
-    // plug the two values I get for the center into the equation  (**), you 
-    // do in fact get r^2. So they are right.
-    
+    // Consider the G17 (XY-plane) case. 
+    // We know that the arc passes through two points, (x0,y0) and (x1,y1).
+    // Let (cx,cy) be the center; this is what we want to determine.
+    // The circles is then
+    // (x-cx)^2 + (y-cy)^2 = r^2
+    // We have two equations, one for (x0,y0) and one for (x1,y1), and
+    // the two unknowns, cx and cy. Solving this is too messy to describe
+    // here. See devman.tex. The gist is that we connect the end-points
+    // with chord, take the perpendicular and that line must pass through
+    // the center.
+    //
+    // Something confusing about this is the use of negative radius.
+    // See Smid, p. 253. It's a little surprising that the geometry works
+    // out as it does, but you *can* have two valid arcs with the same
+    // end-points, the same radius and the correct orientation (cw or ccw).
+    // One of these subtends more than 180 degrees and one subtends less.
+    // Use negative radius when subtending more than 180 degrees.
+    //
     // The code below is written as though we are in the XY-plane (G17).
-    // Rather than type the same code three times, we swap the variables
-    // around to make every thing "look like" G17, then unswap the variables
+    // Rather than type the same code three times, swap the variables
+    // around to make everything "look like" G17, then unswap the variables
     // after the calculation. Conceptually, these are the cases:
     // XY (G17) -- as written
-    // ZX (G18) -- x becomes z and y becomes x. This is strange but think
-    //             of the fact that normally x comes before y. In the ZX plane,
-    //             we want z to come before x.
-    // YZ (G19) -- x becomes y and y becomes z.
+    // ZX (G18) -- x becomes z and y becomes x
+    // YZ (G19) -- x becomes y and y becomes z
     switch (this.axis)
       {
-        case XY : 
-          // Do nothing.
-          break;
+        case XY : break;
           
         case ZX :
           // swap x0 and z0.
-          double t = x0;
-          x0 = z0;
-          z0 = t;
+          double t = x0; x0 = z0; z0 = t;
           
           // swap x1 and z1
-          t = x1;
-          x1 = z1;
-          z1 = t;
+          t = x1; x1 = z1; z1 = t;
                   
           // Careful: these swaps are really with x since we just swapped x 
           // with z.
           // swap y0 and z0
-          t = y0;
-          y0 = z0;
-          z0 = t;
+          t = y0; y0 = z0; z0 = t;
           
           // swap y1 and z1.
-          t = y1;
-          y1 = z1;
-          z1 = t;
+          t = y1; y1 = z1; z1 = t;
           break;
           
         case YZ : 
           // swap x0 and y0.
-          t = x0;
-          x0 = y0;
-          y0 = t;
+          t = x0; x0 = y0; y0 = t;
           
           // swap x1 and y1.
-          t = x1;
-          x1 = y1;
-          y1 = t;        
+          t = x1; x1 = y1; y1 = t;        
           
           // Again, be careful. Swap y0 and z0.
-          t = y0;
-          y0 = z0;
-          z0 = t;
+          t = y0; y0 = z0; z0 = t;
                   
           // Swap y1 and z1.
-          t = y1;
-          y1 = z1;
-          z1 = t;
+          t = y1; y1 = z1; z1 = t;
           break;
       }
     
-    // Before going any further make sure that the two end-points
-    // are different. We're here, so we are trying to determine the center
-    // based on the end-points and the radius. The point is that we can't
-    // cut a complete circle this way. With only a single point on the
-    // circle and the radius, there's no way to determine the center.
-    if ((x0 == x1) && (y0 == y1))
+    // Remember, radius may be negative:
+    double r = Math.abs(radius);
+    
+    // As defined in devman.tex; the slope of the chord formed by the 
+    // end-points is my/mx.
+    double mx = x0-x1;
+    double my = y0-y1;
+    
+    // Distance between the end-points of the arc.
+    double q = Math.sqrt(mx*mx + my*my);
+
+    // The radius must be at least as large as q/2 for it to "reach."
+    if (r < q/2)
+      throw new Exception("radius too small for the given end-points");
+    
+    // Before going any further make sure that the two end-points are 
+    // different. Remember, in this method, we are trying to determine the
+    // center based on the end-points and the radius, *not* using I/J/K values.
+    // We can't cut a complete circle based on the radius. With only a single
+    // point on the circle and the radius, there's no way to determine 
+    // the center. Or, it could also happen that the end-points are simply
+    // too close to one another to be sensible.
+    if (q < DefaultMachine.identicallyClose)
       throw new Exception(
           "a complete circle requires an explicit center, not the radius");
     
-    // Midpoint of the chord formed by the end-points of the arc.
-    double midx = (x0+x1)/2.0;
-    double midy = (y0+y1)/2.0;
-    
-    // Distance between the end-points of the arc.
-    double q = Math.sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
-    
-    if ((radius*radius - (q*q/4.0)) < 0.0)
-      throw new Exception("radius too small for the given end-point");
-    
     // Here are the two possible centers.
-    // If it's a full circle and the start and end point are the same, then
-    // q is zero -- a special case.
-    double c1x;
-    double c1y;
-    double c2x;
-    double c2y;
-    if (q > 0.0)
-      {
-        c1x = midx + ((y1-y0)/q) * Math.sqrt(radius*radius - q*q/4.0);
-        c1y = midy + ((x0-x1)/q) * Math.sqrt(radius*radius - q*q/4.0);
-        c2x = midx - ((y1-y0)/q) * Math.sqrt(radius*radius - q*q/4.0);
-        c2y = midy - ((x0-x1)/q) * Math.sqrt(radius*radius - q*q/4.0);
-      }
-    else
-      {
-        c1x = midx + radius;
-        c1y = midy + radius;
-        c2x = midx - radius;
-        c2y = midy - radius;
-      }
+    double c1x = x0 - (r * my / q);
+    double c1y = y0 + (r * mx / q);
+    double c2x = x0 + (r * my / q);
+    double c2y = y0 - (r * mx / q);
     
     // Which of these two centers is the right one depends on whether we
-    // are moving CW or CCW. As I noted above, you can go from one end-point
-    // of the arc to the other going CW or CCW using either center. This is
-    // unexpected. As a machinist, it seems as though something like
-    // G02 X## Y## R## is unambiguous, but it is not. Draw a picture, and 
-    // you can see that it's true. I choose to use the center that gives 
-    // the shorter arc (subtends the smaller angle) when the given radius
-    // is positive, and the arc that subtends more than 180 degrees when the
-    // radius is negative. That's how G-code works. See Smid, p. 253.
+    // are moving CW or CCW. Use the center that gives the shorter arc 
+    // (subtends the smaller angle) when the given radius is positive, and 
+    // the arc that subtends more than 180 degrees when the radius is 
+    // negative. That's how G-code works. See Smid, p. 253.
+    // It is tempting to get rid of the use of negative radius, and require
+    // that the user give I/J/K, but it would probably upset some people.
     
-    // This is confusing. Think of (x2,y2) as the "reference axis"; it's like
-    // the x-axis when you measure an angle normally.
+    // The angles subtended relative to the two possible centers:
     double subtend1 = subtend(Math.atan2(y0-c1y,x0-c1x),
         Math.atan2(y1-c1y,x1-c1x),cw);
     double subtend2 = subtend(Math.atan2(y0-c2y,x0-c2x),
         Math.atan2(y1-c2y,x1-c2x),cw);
     
-    if (((subtend1 < subtend2) && (radius > 0.0)) || ((subtend1 > subtend2) && (radius < 0.0)))
+    if (((subtend1 < subtend2) && (radius > 0.0)) || 
+        ((subtend1 > subtend2) && (radius < 0.0)))
       {
         this.cx = c1x;
         this.cy = c1y;
@@ -391,63 +533,28 @@ public class ArcCurve extends ToolCurve {
         this.cy = c2y;
       }
     
-    // Un-swap back to normal. Need to swap the centers too.
-    // For the ZX and YZ cases, we need to unswap in the reverse order in which
-    // the swaps were originally done.
+    // Un-swap back to normal. Need to swap the centers too, and for the ZX 
+    // and YZ cases, we need to unswap in the reverse order in which the 
+    // swaps were originally done.
     switch (this.axis)
       {
-        case XY : // Do nothing.
-                  break;
+        case XY : break;
         case ZX : 
-          double t = y0;
-          y0 = z0;
-          z0 = t;
-          
-          t = y1;
-          y1 = z1;
-          z1 = t;
-          
-          t = x0;
-          x0 = z0;
-          z0 = t;
-          
-          t = x1;
-          x1 = z1;
-          z1 = t;
-          
-          t = cx;
-          cx = cz;
-          cz = t;
-          
-          t = cy;
-          cy = cx;
-          cx = t;
+          double t = y0; y0 = z0; z0 = t;
+          t = y1; y1 = z1; z1 = t;
+          t = x0; x0 = z0; z0 = t;
+          t = x1; x1 = z1; z1 = t;
+          t = cx; cx = cz; cz = t;
+          t = cy; cy = cx; cx = t;
           break;
           
         case YZ : 
-          t = y0;
-          y0 = z0;
-          z0 = t;
-          
-          t = y1;
-          y1 = z1;
-          z1 = t;
-          
-          t = x0;
-          x0 = y0;
-          y0 = t;
-          
-          t = x1;
-          x1 = y1;
-          y1 = t;
-          
-          t = cy;
-          cy = cx;
-          cx = t;
-          
-          t = cz;
-          cz = cx;
-          cx = t;
+          t = y0; y0 = z0; z0 = t;
+          t = y1; y1 = z1; z1 = t;
+          t = x0; x0 = y0; y0 = t;
+          t = x1; x1 = y1; y1 = t;
+          t = cy; cy = cx; cx = t;
+          t = cz; cz = cx; cx = t;
           break;
       }
   }
@@ -725,9 +832,9 @@ public class ArcCurve extends ToolCurve {
 
   public StatementData toState() {
       
-    // This allocates a new object. The caller must delete it.
     // This always produces a center based on I/J/K, no matter how this curve
-    // was originally given (so, no radius given).
+    // was originally given (so, not using radius).
+    // BUG: Can't this just be made part of toStatement()?
     DataCircular theState = new DataCircular();
     
     theState.rDefined = false;
@@ -769,18 +876,66 @@ public class ArcCurve extends ToolCurve {
     
     return theState;
   }
-
+  
   public void toStatement(Statement cmd) {
   
-    // Modify the given statement to be of the correct type, and with the correct "guts."
-    if (this.cw == true)
-      cmd.type = Statement.G02;
-    else
-      cmd.type = Statement.G03;
+    // BUG: Bogus needed by old code.
     
-//    if (cmd.data != NULL)
-//      delete cmd.data;
-    cmd.data = toState();
+  }
+  
+  public Statement toStatement() {
+  
+    // Convert this object to a G02 or G03. The point is for the result to
+    // be expressed using I/J/K, and *not* the radius.
+    Statement answer = null;
+    if (this.cw == true)
+      answer = new Statement(Statement.G02);
+    else
+      answer = new Statement(Statement.G03);
+    
+    
+    // BUG: Call this something else, like c for curve or a for arc.
+    DataCircular theState = new DataCircular();
+    
+    theState.rDefined = false;
+    theState.F = this.feedRate;
+    
+    theState.xDefined = true;
+    theState.X = x1;
+    theState.yDefined = true;
+    theState.Y = y1;
+    theState.zDefined = true;
+    theState.Z = z1;
+    
+    // Remember: the i/j/k values are relative, not absolute.
+    if (axis == AxisChoice.XY)
+      {
+        theState.iDefined = true;
+        theState.I = cx - x0;
+        theState.jDefined = true;
+        theState.J = cy - y0;
+        theState.kDefined = false;
+      }
+    else if (axis == AxisChoice.ZX)
+      {
+        theState.iDefined = true;
+        theState.I = cx - x0;
+        theState.jDefined = false;
+        theState.kDefined = true;
+        theState.K = cz - z0;
+      }
+    else
+      {
+        // In YZ-plane
+        theState.iDefined = false;
+        theState.jDefined = true;
+        theState.J = cy - y0;
+        theState.kDefined = true;
+        theState.K = cz - z0;
+      }
+    
+    answer.data = theState;
+    return answer;
   }
 
   /*

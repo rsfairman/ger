@@ -100,8 +100,9 @@ public class Lexer {
     // 2 means that a '(' appeared inside the comment. Most likely, the user
     //   used a ')' shortly thereafter because he had a short remark (like 
     //   this). By flagging these separately, we're being nice to the user; 
-    //   otherwise, he would get a long string of mysterious lexical errors. I was
-    //   bitten by this myself, which is why I added this flag: CommentNested.
+    //   otherwise, he would get a long string of mysterious lexical errors.
+    //   I was bitten by this myself, which is why I added this flag: 
+    //   CommentNested.
     // These constants are defined above.
     
     char c = getc();
@@ -179,7 +180,7 @@ public class Lexer {
     // is treated as a single string. The closing " is read and discarded.
     // All strings must be on a single line -- no newline (\n) allowed inside.
     // 
-    // BUG: This doesn't allow escape characters, like \" or \n or whatever.
+    // NOTE: This doesn't allow escape characters, like \" or \n or whatever.
     String answer = new String();
     
     char c = getc();
@@ -292,11 +293,6 @@ public class Lexer {
     // are reading the digits of a number, then stopping.
     Token answer = new Token('G',lineCount);
     try {
-      
-      // BUG: changing... Not sure why I was using d (double) here.
-      //answer.d = readWholeNumber();
-      
-      
       answer.i = readWholeNumber();
       
       // Maybe this is a GXX.XX type code, with a "subpart" to the number.
@@ -420,13 +416,6 @@ public class Lexer {
     // Similar to G-code.
     Token answer = new Token('O',lineCount);
     
-    // This is one of the rare situations where I care about the character at
-    // which this occurred since we need it for subroutines.
-    // BUG: DO I care??? Things have changed and character counts may not
-    // be needed anymore.
-    // This is the character at which the "O" occurs, with 0 as the first 
-    // character.
-    answer.characterCount = theCode.getLastCharIndex()-1;
     try {
       answer.i = readWholeNumber();
     } catch (Exception e) {
@@ -663,8 +652,6 @@ public class Lexer {
         
         if (answer.letter == Token.ERROR)
           advanceToEOL();
-        
-        answer.endCount = theCode.getLastCharIndex();
         return answer;
       }
     
@@ -678,8 +665,6 @@ public class Lexer {
         // a call to an external wizard function.
         this.wizardMode = true;
         answer = readWord(c);
-        
-        answer.endCount = theCode.getLastCharIndex();
         return answer;
       }
     
@@ -717,9 +702,6 @@ public class Lexer {
                     return answer;            
       }
     
-    // Tack on the index of the character following the one most
-    // recently read.
-    answer.endCount = theCode.getLastCharIndex();
     return answer;
   }
   

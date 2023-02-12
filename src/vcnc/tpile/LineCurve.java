@@ -1,6 +1,6 @@
 package vcnc.tpile;
 
-import vcnc.Statement;
+import vcnc.tpile.Statement;
 import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.StatementData;
 
@@ -154,6 +154,13 @@ public class LineCurve extends ToolCurve {
     return theState;
   }
 
+  public Statement toStatement() {
+    
+    // BUG: Refactoring... 
+    // I think this is the one to use, and not the one below.
+    return null;
+  }
+  
   public void toStatement(Statement cmd) {
     
   // Modify the given statement to be of the correct type, and with the correct "guts."

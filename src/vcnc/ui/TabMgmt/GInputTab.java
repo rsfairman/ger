@@ -33,13 +33,21 @@ public class GInputTab extends JScrollPane implements TypedDisplayItem {
   // G-code leads to various outputs: partially or fully transpiled code,
   // renderings, etc. This tracks what has been generated from this G-code.
   // G-code can lead to any of these.
-
+  
+  // These match the various cases in Translator.
+  // BUG: I am not happy with this. Having an explicit pointer to 
+  // ever case is bad.
   // BUG: This will need to be completed for the additional layers.
   public LexerTab lexOut = null;
   public OutputTextTab parseOut = null;
-  public OutputTextTab layer0AOut = null;
-  public OutputTextTab layer0BOut = null;
-  public OutputTextTab layer00Out = null;
+  public OutputTextTab directivesOut = null;
+  public OutputTextTab subProgsOut = null;
+  public OutputTextTab wizardsOut = null;
+  public OutputTextTab unitsOut = null;
+  public OutputTextTab offsetsOut = null;
+  public OutputTextTab polarOut = null;
+  public OutputTextTab incrementalOut = null;
+  public OutputTextTab cutterCompOut = null;
 
   
   public TabbedType type() {
@@ -63,6 +71,43 @@ public class GInputTab extends JScrollPane implements TypedDisplayItem {
     
     // For potential use later, if the user asks to see line numbers.
     this.lineNumberWidget = new TextLineNumber(theText);
+  }
+  
+  public OutputTextTab getOutputTab(TabbedType layer) {
+    
+    // BUG: LexerTab has the wrong type to return here.
+    switch (layer) {
+      case PARSER_OUT      : return this.parseOut;
+      case DIRECTIVES_OUT  : return this.directivesOut;
+      case SUBPROGS_OUT    : return this.subProgsOut;
+      case WIZARDS_OUT     : return this.wizardsOut;
+      case UNITS_OUT       : return this.unitsOut;
+      case OFFSETS_OUT     : return this.offsetsOut;
+      case POLAR_OUT       : return this.polarOut;
+      case INCREMENTAL_OUT : return this.incrementalOut;
+      case CUTTERCOMP_OUT  : return this.cutterCompOut;
+      default              : break;
+    }
+    return null;
+  }
+  
+  public void setOutputTab(TabbedType layer,OutputTextTab tab) {
+    
+    // BUG: Again, lexer is a special case and it shouldn't be.
+    switch (layer) {
+      case PARSER_OUT      : this.parseOut = tab;
+      case DIRECTIVES_OUT  : this.directivesOut = tab;
+      case SUBPROGS_OUT    : this.subProgsOut = tab;
+      case WIZARDS_OUT     : this.wizardsOut = tab;
+      case UNITS_OUT       : this.unitsOut = tab;
+      case OFFSETS_OUT     : this.offsetsOut = tab;
+      case POLAR_OUT       : this.polarOut = tab;
+      case INCREMENTAL_OUT : this.incrementalOut = tab;
+      case CUTTERCOMP_OUT  : this.cutterCompOut = tab;
+      default              : break;
+    }
+    
+    
   }
   
   public JTextArea getTextArea() {

@@ -52,11 +52,11 @@ here's a list of things to revisit (or visit).
 
 \section{G-Code}
 
-There is no universally accepted standard for ``G-code.'' The
-most commonly used codes do adhere to common usage, but usage for the
-less common codes varies from one CNC controller to the next. \ger\ 
-assumes that the common codes do follow a certain form; for 
-other codes, how they are dealt with is left up to the user.
+There is no universally accepted standard for ``G-code.'' Many codes
+do adhere to common usage, but usage for the less common codes varies
+from one CNC controller to the next. \ger\ assumes that the common
+codes follow accepted usage and does its best to finesse the more
+problematic codes.
 
 \ger\ is more flexible than many real-world controllers about the order
 and grouping of codes. For instance, something like this is accepted:
@@ -92,23 +92,8 @@ wide variety of machines. For example, not every controller accepts
 standard. \ger\ accepts {\tt M98} and converts it to more basic
 commands that any real-world machine will accept.
 
-For uncommon codes, \ger\ assumes that the code extends to the end of
-the line on which it appears (or to a semi-colon). \ger\ can't know
-the idiosyncracies of every machine, so these uncommon codes simply
-pass through the translator so that they can be fed to a physical
-machine that may understand them. By default, the \ger\ simulator ignores
-these codes. For something like {\tt M08} or {\tt M09} (coolant
-on/off), ignoring the code is a natural choice; but in other cases,
-like {\tt G84.3} (a left-handed tapping cycle), it is possible to
-define the code's meaning so that \ger\ can simulate it
-faithfully. See SOME-FUTURE-SECTION.\footnote{In fact, I've pretty
-much taken out the stuff that might be used to do this. In theory, it
-could be put back, but I don't see this as likely to be much
-desired. \ger\ either knows what a code does or it rejects the code.}
-
-In addition to the ability to define uncommon codes, it is also
-possible to define your own functions that act as ``wizards.'' For
-example, one might define
+\ger\ makes it possible to define your own functions that act as
+``wizards.'' For example, one might define
 \begin{verbatim}
 Pocket 75.0 30.0 10.0 
 \end{verbatim}
@@ -154,7 +139,7 @@ will move to that position in rapid mode.\\
 &Circular interpolation. If an arc is specified using {\tt R} rather than {\tt
   I/J/K}, then a positive {\tt R}-value produces an arc that subtends
 less than $180^\circ$; using a negative {\tt R}-value produces an arc
-that's more than $180^\circ$.\\
+that's more than $180^\circ$. See Smid, p. 253. \\
 &Also, various machines may treat the ZX plane slightly
 differently, depending on whether they are ``standard'' or ``vertical
 machining.'' So, {\tt G02} and {\tt G03} may be treated in opposite
@@ -174,6 +159,10 @@ and it will assume that the radius of the circle is equal to the
 larger of these two distances.\\
 {\tt G15}&Polar coordinates off.\\
 {\tt G16}&Polar coordinates on. \\
+& I'VE CHANGED THIS. Really, polar coordinates are inherently an
+incremental concept. If you wanted to use them in absolute mode, the
+only reasonable way to do so would be relative to machine zero, and
+that would be strange.\\
 &You may enter polar coordinate mode while in incremental mode
 ({\tt G91}) or you may enter incremental mode after invoking {\tt
   G16}, or go back to absolute mode ({\tt G90}). Not every real-world CNC
@@ -186,6 +175,7 @@ in polar coordinate mode is \emph{not} allowed.\\
 {\tt G19}& Work in the YZ-plane.\\
 & While in cutter comp mode, only the standard XY-plane may be
 used. This is typical for real-world controllers.\\
+& I NEED TO EXPLAIN A LITTLE ABOUT WHY THAT IS.\\
 {\tt G20}&Inches.\\
 {\tt G21}&Millimeters.\\
 & Ger works internally using either inches of millimeters, but you can
@@ -381,87 +371,116 @@ called.
 The next layer is the parser. It converts the output from the lexer to
 syntacially valid statements. 
 
-\section{Coordinate System}
+\section{Coordinate Systems}
 
-The coordinate system is inherently tied up with the
-particular physical machine on which the G-code is intended to
-run.\footnote{In principle, it would be possible to specify the machine
-geometry sufficiently, including any tool turret, so as to detect
-tool crashes. But there are too many possible machine
-arrangements, and for this to work well, it would also be necessary to
-specify any jigs and fixtures.} Each time a program starts, the tool
-is assumed to be located at $(X,Y,Z) = (0,0,0)$, and the machine
-defaults to working in inches. It's often unnecessary to consider the
-coordinate system in any further detail, but there are certain
-additional settings and controls available.
+The coordinate system is inherently tied up with the particular
+physical machine on which the G-code is intended to run. Codes like
+{\tt G28} (machine zero return) are impossible to interpret in a way
+that would be consistent with every machine. Some other codes related to
+the coordinate system are accepted by \ger, but ``translated away.''
 
+Machines typically have several notions of coordinate system
+origin. In theory, ``machine zero'' (or ``home'') is a 
+position fixed at the factory\footnote{See Peter
+Smid, \emph{CNC Progrmming Handbook}, 2008 (3rd ed.), p. 153, where he
+says that machine zero
+\begin{quote}
+  ...is the position of all machine slides at one of the extreme
+  travel limits of each axis. Its exact position is determined by the
+  machine manufacturer and is not normally changed during the machine
+  working life.
+  \end{quote}
+In my experience that is not always true. In any case, it would be
+impossible for \ger\ to reflect the quirks of every possible machine. }
+and {\tt G28} should return the cutter to that position. Another form
+of origin is the Part (or Program) Reference Zero (PRZ). The PRZ is
+the coordinate system relative to which most commands are given.
 
-These codes are particularly related to
-the coordinate system:
+\ger\ defines machine zero and the (initial) PRZ to be the location of
+the tool immediately before the first line of the program. As with
+most real machines, the location of machine zero can't be changed. So,
+the tool always starts at (X,Y,Z) = (0,0,0). \ger\ \emph{does not
+accept the} {\tt G28} {\tt command}; there's very little reason to
+return the tool to (0,0,0), and it's always possible to move there
+with {\tt G00} or {\tt G01} in the usual way.
+
+The important point is that \ger\ will produce code with all coordinates
+given (in absolute terms) using the location of the tool at the start
+of the first line of the program as the orgin. To run the output code
+on a physical machine, the easiest thing do will {\it usually} be to
+set the PRZ to the surface of the lower-left corner of the part. As
+always, consider the possibility of interference and tool crashes.
+
+\subsection{Changing the PRZ}
+
+Use {\tt G52} to make the given values, expressed relative to machine
+zero, the new PRZ. Thus, 
 \begin{verbatim}
-G20/21 (inches/mm)
-G28 (machine zero return)
-G52/54 (local coordinate system/cancel)
-G55/56/57/58/59 (use work offsets table)
-G92 (I MIGHT WANT TO ADD THIS ONE).
+G52 X2.000 Y-4.000 Z1.00
 \end{verbatim}
-
-\subsection{Machine Zero and Work Offsets}
-
-The location of ``machine home'' or ``machine zero'' is the position
-of the tool at the start of the program; {\tt G28} always returns the
-tool to this position, in rapid mode. The PRZ (``program reference
-zero,'' or ``part reference zero'') starts off the same as machine 
-zero, but can be adjusted with {\tt G52} or {\tt G55-G59}. Absolute
-coordinates are always given relative to the current PRZ.
-
-{\tt G52} is given with values for {\tt X, Y} and {\tt Z}, and each of
-these values defaults to zero if it is omitted. The location of the
-PRZ moves to the given {\tt (X,Y,Z)} value relative to machine zero
-(which is fixed for all time). For example, after
+means that the location 2 units to the right, 4 units below and 1 unit
+higher than machine zero will be treated as the PRZ in the code that
+follows. Saying
 \begin{verbatim}
-G52 X1.000 Y2.000 Z0.500
+G52 X0 Y0 Z0
 \end{verbatim}
-appears, the location of {\tt (0,0,0)} will be the same as {\tt
-  (1,2,0.5)} had been prior to the {\tt G52}. Put another way,
-subtract the values given to {\tt G52} from all coordinates, and you
-have the location relative to machine zero.
+(or simply {\tt G52}, with no arguments) resets the coordinate system
+to what it was when the program started.
 
-The codes {\tt G55} through {\tt G59} works just as {\tt G52}, except
-that the {\tt X, Y} and {\tt Z} values are taken from the ``work
-offsets table.'' This table is shared between all programs, and it is
-also possible to modify this table with the {\tt SetWorkOffset}
-command before the {\tt O}-command with the program number.
+Often, {\tt G92} is the more useful command.\footnote{This definition of {\tt
+  G92} is not universal. Some FANUC machines work this way, and other
+machines don't. }  The values given with 
+{\tt G92} become the current coordinates under a new PRZ. For example, 
+\begin{verbatim}
+G92 X1.000 Y-1.000 Z2.000
+\end{verbatim}
+resets the PRZ so that the cutter's current location is given
+by $(1,-1,2)$. Saying 
+\begin{verbatim}
+G92 X0 Y0 Z0
+\end{verbatim}
+(or simply {\tt G92}, with no arguments) is a convenient way to make
+the current tool location the new PRZ.
 
-The PRZ is reset to machine zero with {\tt G54}.
+Most physical machines have a work offsets table that's used with the
+{\tt G54-G59} commands. Work offsets are often used as a way to
+partition the tool table so that each partition has its own local
+coordinate system, with the code for different parts running more or
+less independently in each partition. This can be handy in a
+production environment. \ger\ has a work offets table, even though it
+seems less useful in a translator. 
+
+The {\tt G54-G59} commands work in a manner similar to {\tt G52}, except
+that the arguments come from the work offsets table. That is, {\tt
+  G54} (no arguments) is the same as
+\begin{verbatim}
+G52 Xx Yy Zz
+\end{verbatim}
+where {\tt x, y} and {\tt z} are taken from the work offsets table. 
+
+\subsection{Tool Length Offset}
+
+The {\tt G40}, {\tt G43} and {\tt G49} commands are used on many
+machines for tool length offset (TLO). This is used to adjust for the
+fact that, when tools are stored in a turret, the location of the
+cutting edges of the various tools will differ. TLO can also be used
+to take cutter wear into account. 
+
+\ger\ accepts these commands, but they pass through unchanged, without
+affecting the surrounding code. In theory, \ger\ could have been
+written to simulate the effect of the TLO commands in more detail, but
+doing so would require that the tool table reflect the irritating
+real-world quirks of various cutters and turrets. The value of \ger's
+translation and simulation is that it allows you to avoid these
+irritations -- or at least, to avert your eyes until they can't be avoided. 
+
+
+\vskip 2cm 
 
 
 
-\vskip 1cm
 
-
-
-Blah, blah. Should probably just include most of the discussion in the
-long able above, with a few remarks here.
-
-NOTE: It is tempting to simply get rid of the workoffset table and the
-commands related to it ({\tt G55}, etc.). I don't think people really
-use this.
-
-The bottom line is that whenever a program starts, it assumed that the
-tool starts off at $(0,0,0)$. This is the location to which {\tt G28}
-returns. You can also use {\tt G52/5/6/7/8/9} to change this and all
-of these are canceled by {\tt G54}.
-
-For the work offset tables, want there to be a table that could be
-used for every program, but it also makes sense to provide some
-special commands that can be used before the program starts to set
-these table values.
-
-It also means that -- if I want to specify the billet at all -- then
-it needs to be done relative to the initial origin. The three ranges
-would be given in something like $X=[a,b]$, $Y=[c,d]$ and $Z=[e,f]$,
-where these values could be negative.
+\subsection{Old Discussion...}
 
 
 Exactly how to define the geometry of the machine and the part,

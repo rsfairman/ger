@@ -49,7 +49,7 @@ import vcnc.util.FileIOUtil;
 import vcnc.util.LoadOrSaveDialog;
 import vcnc.util.ChoiceDialogRadio;
 import vcnc.persist.Persist;
-import vcnc.tpile.MachineState;
+import vcnc.tpile.DefaultMachine;
 import vcnc.tpile.Translator;
 import vcnc.tpile.lex.Lexer;
 
@@ -363,22 +363,56 @@ public class MainWindow extends JFrame
   }
   */
   
+  private void handleSimpTabs(GInputTab gCodeTab,int layer,int curTabIndex) {
+    
+    // Manage the tabs when the user asks for a certain layer of translation.
+    // There could be numerous tabs open for the various forms of partially
+    // translated output of this G-code.
+    //
+    // BUG: I am not happy with this. The entire thing is too tangly.
+
+    String fullyDigested = 
+          Translator.digest(gCodeTab.getTextArea().getText(),layer);
+    
+    if (gCodeTab.parseOut != null)
+      {
+        OutputTextTab parseOutput = gCodeTab.parseOut;
+        parseOutput.theText.setText(fullyDigested);
+        
+        // This particular tab may have been closed in the GUI (with the
+        // x-icon in the tab), but that doesn't remove it from memory.
+        // If it's not visible, make it so.
+        // 
+        // BUG: When tabs are closed this way, they *should* be removed
+        // from memory, but that's not easy due to the way tabs are
+        // managed. The code to handle the x-icon as a button is buried
+        // too deeply.
+        int test = theTabs.indexOfComponent(gCodeTab.parseOut);
+        if (test < 0)
+          // Make the tab visible again.
+          theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",
+              parseOutput);
+      }
+    else
+      {
+        OutputTextTab parseOutput = new OutputTextTab(
+            TabbedType.PARSER_OUT,fullyDigested,gCodeTab);
+        theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",
+            parseOutput);
+        gCodeTab.parseOut = parseOutput;
+      }
+  }
   
   private void doSimplify(int layer) {
-
-    // BUG: Should reset the MachineState to whatever is from the .ger
-    // preferences directory. Individual G-code scripts can reset certain
-    // "global" things like the tool table on a per-script basis, so this
-    // *does* need to be reloaded.
-    // 
-    // BUG: But that won't be enough. Also need to reset things like the
-    // tool position to (0,0,0). 
     
   	// Run some number of layers of the transpiler. The given layer is where 
     // to stop the translation. Translator defines certain values to be used
     // as the layer count: Translator.ToL00, etc.
+    // There could be numerous tabs open for the various forms of partially
+    // translated output of this G-code.
     
     // BUG: Blah...this whole thing needs to be reworked.
+    // BUG: And the lexer could be done here too, I think.
   	
     // Look at the top-most tab, but only use it if it's input G-code.
     int curTabIndex = theTabs.getSelectedIndex();
@@ -395,125 +429,43 @@ public class MainWindow extends JFrame
     
     GInputTab gCodeTab = (GInputTab) curTabComponent;
     
-  	// BUG: Get rid of exception?
-  	
-//  	try {
-  	  String fullyDigested = 
+    String fullyDigested = 
   	      Translator.digest(gCodeTab.getTextArea().getText(),layer);
   	  
-  	  // There could be numerous tabs open for the various forms of partially
-  	  // translated output of this G-code.
-  	  
-  	  // BUG: This will need to be completed for the additional layers.
-  	  // BUG: And the lexer could be done here too, I think.
-  	  // BUG: Can these cases (which are almost identical) be combined?
-  	  // Put somewhere else? Hideous.
-  	  if (layer == Translator.ThruParser)
-  	    {
-  	      if (gCodeTab.parseOut != null)
-  	        {
-  	          OutputTextTab parseOutput = gCodeTab.parseOut;
-  	          parseOutput.theText.setText(fullyDigested);
-  	          
-  	          // This particular tab may have been closed in the GUI (with the
-  	          // x-icon in the tab), but that doesn't remove it from memory.
-  	          // If it's not visible, make it so.
-  	          // 
-  	          // BUG: When tabs are closed this way, they *should* be removed
-  	          // from memory, but that's not easy due to the way tabs are
-  	          // managed. The code to handle the x-icon as a button is buried
-  	          // too deeply.
-  	          int test = theTabs.indexOfComponent(gCodeTab.parseOut);
-  	          if (test < 0)
-  	            // Make the tab visible again.
-  	            theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",
-                    parseOutput);
-  	        }
-  	      else
-  	        {
-  	          OutputTextTab parseOutput = new OutputTextTab(
-  	              TabbedType.PARSER_OUT,fullyDigested,gCodeTab);
-  	          theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Parser",
-  	              parseOutput);
-  	          gCodeTab.parseOut = parseOutput;
-  	        }
-  	    }
-      else if (layer == Translator.ThruDirectives)
-        {
-          if (gCodeTab.layer0AOut != null)
-            {
-              OutputTextTab layer0AOutput = gCodeTab.layer0AOut;
-              layer0AOutput.theText.setText(fullyDigested);
-              
-              int test = theTabs.indexOfComponent(gCodeTab.layer0AOut);
-              if (test < 0)
-                // Make the tab visible again.
-                theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0A",
-                    layer0AOutput);
-            }
-          else
-            {
-              OutputTextTab layer0AOutput = new OutputTextTab(
-                  TabbedType.LAYER0A_OUT,fullyDigested,gCodeTab);
-              theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0A",
-                  layer0AOutput);
-              gCodeTab.layer0AOut = layer0AOutput;
-            }
-        }
-      else if (layer == Translator.ToL0B)
-        {
-          if (gCodeTab.layer0BOut != null)
-            {
-              OutputTextTab layer0BOutput = gCodeTab.layer0BOut;
-              layer0BOutput.theText.setText(fullyDigested);
-              
-              int test = theTabs.indexOfComponent(gCodeTab.layer0BOut);
-              if (test < 0)
-                // Make the tab visible again.
-                theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0B",
-                    layer0BOutput);
-            }
-          else
-            {
-              OutputTextTab layer0BOutput = new OutputTextTab(
-                  TabbedType.LAYER0B_OUT,fullyDigested,gCodeTab);
-              theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer0B",
-                  layer0BOutput);
-              gCodeTab.layer0BOut = layer0BOutput;
-            }
-        }
-  	  /*
-      else if (layer == Translator.ToL00)
-        {
-          if (gCodeTab.layer00Out != null)
-            {
-              OutputTextTab layer00Output = gCodeTab.layer00Out;
-              layer00Output.theText.setText(fullyDigested);
-              
-              int test = theTabs.indexOfComponent(gCodeTab.layer00Out);
-              if (test < 0)
-                // Make the tab visible again.
-                theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer00",
-                    layer00Output);
-            }
-          else
-            {
-              OutputTextTab layer00Output = new OutputTextTab(
-                  TabbedType.LAYER00_OUT,fullyDigested,gCodeTab);
-              theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": Layer00",
-                  layer00Output);
-              gCodeTab.layer00Out = layer00Output;
-            }
-        */
-      else
-        System.err.println("Fell through adding tab of unknown type");
-  	  
-  	  
-  	
-//  	} catch (Exception e) {
-//      JOptionPane.showMessageDialog(this,e.getMessage());
-//      return;
-//  	}
+    
+    // The output tab (if it already exists) for the code translated to
+    // the given layer.
+    TabbedType tabType = TabbedType.toEnum(layer);
+    OutputTextTab outputTab = gCodeTab.getOutputTab(tabType);
+
+    if (outputTab != null)
+      {
+        // The output tab does exist, and we need to update the contents.
+        outputTab.theText.setText(fullyDigested);
+        
+        // This particular tab may have been closed in the GUI (with the
+        // x-icon in the tab), but that doesn't remove it from memory.
+        // If it's not visible, make it so.
+        // 
+        // BUG: When tabs are closed this way, they *should* be removed
+        // from memory, but that's not easy due to the way tabs are
+        // managed. The code to handle the x-icon as a button is buried
+        // too deeply.
+        int test = theTabs.indexOfComponent(outputTab);
+        if (test < 0)
+          // Make the tab visible again.
+          theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": " +tabType.toName(),
+              outputTab);
+      }
+    else
+      {
+        // Must create the output tab from scratch instead of reviving
+        // an existing one.
+        outputTab = new OutputTextTab(tabType,fullyDigested,gCodeTab);
+        theTabs.addTab(theTabs.getTitleAt(curTabIndex) + ": " +tabType.toName(),
+            outputTab);
+        gCodeTab.setOutputTab(tabType,outputTab);
+      }
   }
   
   /*
@@ -903,7 +855,7 @@ public class MainWindow extends JFrame
     choiceText[1] = "Use millimeters interally";
     
     int initial = 0;
-    if (MachineState.machineInchUnits == true)
+    if (DefaultMachine.inchUnits == true)
     	initial = 0;
     else
     	initial = 1;
@@ -918,13 +870,13 @@ public class MainWindow extends JFrame
     if (choice == 0)
     	{
     		// Use inches
-    	  MachineState.machineInchUnits = true;
+    	  DefaultMachine.inchUnits = true;
 //    		this.scale = 1000.0;
     	}
     else
     	{
     		// User chose millimeters.
-    	  MachineState.machineInchUnits = false;
+    	  DefaultMachine.inchUnits = false;
 //    		this.scale = 40.0;
     	}
     
@@ -1125,20 +1077,20 @@ public class MainWindow extends JFrame
         doSimplify(Translator.ThruParser);
       else if (e.getActionCommand().equals("Thru Directives"))
         doSimplify(Translator.ThruDirectives);
+      else if (e.getActionCommand().equals("Thru Sub-programs"))
+        doSimplify(Translator.ThruSubProgs);
+      else if (e.getActionCommand().equals("Thru Wizards"))
+        doSimplify(Translator.ThruWizards);
       else if (e.getActionCommand().equals("Thru Units"))
         doSimplify(Translator.ThruUnits);
-      else if (e.getActionCommand().equals("Thru Wizards"))
-        doSimplify(Translator.ToL0B);
-	  	else if (e.getActionCommand().equals("Simplify 01"))
-	      doSimplify(Translator.ToL01);
-	  	else if (e.getActionCommand().equals("Simplify 02"))
-	      doSimplify(Translator.ToL02);
-	  	else if (e.getActionCommand().equals("Simplify 03"))
-	      doSimplify(Translator.ToL03);
-	  	else if (e.getActionCommand().equals("Simplify 04"))
-	      doSimplify(Translator.ToL04);
-	  	else if (e.getActionCommand().equals("Simplify 05"))
-	      doSimplify(Translator.ToL05);
+      else if (e.getActionCommand().equals("Thru Offsets"))
+        doSimplify(Translator.ThruWorkOffsets);
+      else if (e.getActionCommand().equals("Thru Polar"))
+        doSimplify(Translator.ThruPolar);
+      else if (e.getActionCommand().equals("Thru Incremental"))
+        doSimplify(Translator.ThruIncremental);
+//      else if (e.getActionCommand().equals("Thru Cutter Comp"))
+//        doSimplify(Translator.ThruCutterComp);
 //    else if (e.getActionCommand().equals("Test Pulses"))
 //    doTestPulses();
 //  else if (e.getActionCommand().equals("Test Voxel Frame"))
@@ -1195,8 +1147,13 @@ public class MainWindow extends JFrame
     theMenu.add(new MenuItem("Thru Lexer"));
     theMenu.add(new MenuItem("Thru Parser"));
     theMenu.add(new MenuItem("Thru Directives"));
-    theMenu.add(new MenuItem("Thru Units"));
+    theMenu.add(new MenuItem("Thru Sub-programs"));
     theMenu.add(new MenuItem("Thru Wizards"));
+    theMenu.add(new MenuItem("Thru Units"));
+    theMenu.add(new MenuItem("Thru Offsets"));
+    theMenu.add(new MenuItem("Thru Polar"));
+    theMenu.add(new MenuItem("Thru Incremental"));
+    theMenu.add(new MenuItem("Thru Cutter Comp"));
 //    theMenu.add(new MenuItem("Test Pulses"));
 //    theMenu.add(new MenuItem("Test Voxel Frame"));
     theMenu.addActionListener(this);

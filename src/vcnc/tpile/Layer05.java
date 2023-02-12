@@ -27,10 +27,6 @@ Layer04 eliminates incremental coordinates so that everything is given in
 Aside: I keep thinking that I should be able to get rid of G17, 18, 19 
 (to choose a plane) at some earlier stage of processing, but I need these at
 the final interpreter layer because they affect how G02 and G03 are treated.
-BUG: Maybe what I should do it change the format of G02 and G03 so that the
-plane is specified as part of the statement. That would clean up my code a bit,
-but it would mean that the output of the final layer would have some format
-(that I come up with) that is not consistent with standard G-code.
 
 This layer handles cutter comp, which is definitely the trickiest thing.
 The output of this layer consists of the most fundamental moves: lines and 

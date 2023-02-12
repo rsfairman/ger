@@ -28,6 +28,7 @@ import vcnc.tpile.parse.DataCircular;
 import vcnc.tpile.parse.DataMove;
 import vcnc.tpile.parse.DataSubProg;
 import vcnc.tpile.parse.DataSubroutineCall;
+import vcnc.tpile.parse.DataTLO;
 import vcnc.tpile.parse.DataWizard;
 import vcnc.tpile.parse.Parser;
 
@@ -41,33 +42,22 @@ public class Translator {
   // *ordered* allows the code to be briefer since it allows cases to fall
   // through more easily.
   // 
-  // The way these are ordered is a little artificial. Certain tasks must occur
-  // after other tasks, but some minor reordering would be OK in certain cases.
-  // Also, it might be possible to make finer distinctions here, but isn't
-  // really necessary and it would be awkward. For example, ThruUnits deals
-  // with G20/21 (inch/mm) and G17/18/19 (reference plane). These could (?) be 
-  // teased apart, but they naturally go together.
-  
-  // BUG: For now, G15/16 for polar coordinates is ignored. It should (?)
-  // go with the ThruUnits stage, although I'm a little concerned with
-  // how it interacts with other things.
+  // The way these are ordered is a little artificial. Certain tasks must 
+  // occur after other tasks, but some minor reordering would be OK.
+  // One factor is what helps the user to debug. For example, wizards are done 
+  // early since it seems most likely for there to be a bug (in the user's 
+  // code) related to how wizard output is affected by other things.
   
   public static final int ThruLexer = -1;
   public static final int ThruParser = 0;
   public static final int ThruDirectives = 1;
   public static final int ThruSubProgs = 2;
-  public static final int ThruUnits = 3;
-  
-  // BUG: These are now (mostly? entirely?) meaningless. 
-  public static final int ToL0B = 4; // BUG: Wizards have been moved.
-  public static final int ToL01 = 5;
-  public static final int ToL02 = 6;
-  public static final int ToL03 = 7;
-  public static final int ToL04 = 8;
-  public static final int ToL05 = 9;
-  
-  public static final int ThruWizards = 10;
-  
+  public static final int ThruWizards = 3;
+  public static final int ThruUnits = 4;
+  public static final int ThruWorkOffsets = 5;
+  public static final int ThruPolar = 6;
+  public static final int ThruIncremental = 7;
+  public static final int ThruCutterComp = 8;
   
   // BUG: Get rid of this. Here to simplify while refactoring.
   // Or maybe keep it (it makes sense), but make the same as the 
@@ -81,13 +71,15 @@ public class Translator {
 	
 	
 	// State of the machine....
-	// These are here to make them visible to wizards.
-	// BUG: Make this stuff private?
+	// These are public so that they are visible to wizards.
 	
 	// Whether in G00 (rapid travel) or G01 (normal travel) mode.
 	// Really, this doesn't matter for translation, but it doesn't hurt
 	// to track it and it helps as a reminder of what's really going on.
 	public static boolean rapidTravel = false;
+	
+	// When in normal (not rapid) travel mode, the feed rate persists.
+	public static double curFeedRate = -1.0;
 	
   // Whether the machine is *currently* working in inches (true) or mm (false).
   public static boolean curInch = true;
@@ -97,70 +89,108 @@ public class Translator {
 
   // Whether currently in polar coordinates mode (G15/16).
   public static boolean usingPolar = false;
-	
-	
-	
-	
-	// BUG: Can I get rid of the exception here?
-  // BUG: Is this used at all?
-	
-	private Translator(
-	    int depth,
-	    String gCode
-	    //boolean inch,double scale,
-			//double materialX,double materialY,double materialZ,
-			//double przX,double przY,double przZ,
-			//double X0,double Y0,double Z0,
-			//ToolTurret turret,WorkOffsets offsets
-			) throws Exception {
-		;
-		
-	}
-	
-	private static void resetMachine() {
-	  
-	  // Call this before a translation so that the machine starts off in its
-	  // default state. Note that we use Persist.reload() to go all the way back
-	  // to the settings stored in the .ger directory. A previous run may have
-	  // changed the values in MachineState -- for example a call to the
-	  // SetUnits directive made by a previous run or a change to the tool table.
-    Persist.reload();
-    
-	  rapidTravel = false;
-    curInch = MachineState.machineInchUnits;
-	  curAxis = AxisChoice.XY;
-	  usingPolar = false;
-	  
-//	  System.out.println("Starting with machine inch == " +curInch);
-	}
-	
-  private static String formError(int lineNumber,String msg) {
-    
-    return "Error on line " +lineNumber+ ": " +msg;
-  }
 
-  private static Statement formError(Statement s,String msg) {
-    
-    // BUG: This is a much better way to do things.
-    // See if I can get rid of the "other" formError() in all classes that do this.
-    
-    Statement answer = new Statement(Statement.ERROR);
-    answer.lineNumber = s.lineNumber;
-    answer.charNumber = s.charNumber;
-    answer.error = formError(s.lineNumber,msg);
-    return answer;
-  }
+  // Whether in incremental (or absolute) mode.
+  public static boolean usingIncremental = false;
   
+  // Whether currently using cutter comp.
+  public static boolean usingCutterComp = false;
   
+  // If cutter comp is in force, whether left or right.
+  public static boolean leftCutterComp = false;
+  
+  // The location of the PRZ, relative to machine zero, is given by these 
+  // coordinates. Remember that machine zero is defined to be the location of 
+  // the tool immediately before the first line of code executes. So, the
+  // command 
+  // G00 X0 Y0 Z0
+  // will move the tool to (xPRZ,yPRZ,zPRZ) in terms of the machine coordinates
+  // and those are the coordinates that should appear in the translated output
+  // for the move.
+  public static double xPRZ = 0.0;
+  public static double yPRZ = 0.0;
+  public static double zPRZ = 0.0;
+	
+  // The current position of the cutter, relative to machine zero. Effectively,
+  // this is relative to the location of the tool immediately before the first
+  // line of the program.
+  public static double xCur = 0.0;
+  public static double yCur = 0.0;
+  public static double zCur = 0.0;
+  
+	
+	
   ///////////////////////////////////////////////////////////////////
   //
-  // Stuff to handle ThruUnits -- G20/21, G15/16, G17/18/19, plus any
-  // necessary coordinate translation due to these.
+  // Code for various initial checks that need to be noted or skipped
+	// in a fairly dumb way.
   //
   ///////////////////////////////////////////////////////////////////
-
   
-  private static boolean handleAxis(Statement cmd) {
+
+  private static boolean handleSkippable(LLNode<Statement> curNode) {
+  
+    // Return true to skip over any single statement (without removing it from
+    // the wip) that doesn't affect the translation but that could affect a
+    // simulation, or that might be important to a physical machine, like M07 
+    // for 'coolant on', etc. Note that this does skip M06 (tool change). It
+    // *will* affect translation, but not until we reach the cutter comp stage.
+
+    if (curNode == null) return false;
+    
+    Statement cur = curNode.data;
+    
+    // Skip over any errors that were inserted at some earlier stage.
+    if (cur.type == Statement.ERROR) return true;
+    
+    if (cur.type == Statement.M00) return true;
+    if (cur.type == Statement.M01) return true;
+    if (cur.type == Statement.M03) return true;
+    if (cur.type == Statement.M04) return true;
+    if (cur.type == Statement.M05) return true;
+    if (cur.type == Statement.M06) return true;
+    if (cur.type == Statement.M07) return true;
+    if (cur.type == Statement.M08) return true;
+    if (cur.type == Statement.M09) return true;
+    if (cur.type == Statement.M40) return true;
+    if (cur.type == Statement.M41) return true;
+    if (cur.type == Statement.M48) return true;
+    if (cur.type == Statement.M49) return true;
+
+    // Note that TLO commands G43 and G44 are not skipped. It may be 
+    // necessary to convert any units given as arguments to inch/mm.
+    if (cur.type == Statement.G49) return true;
+    
+    return false;
+  }
+
+  private static boolean noteCutterComp(Statement cmd) {
+    
+    if (cmd.type == Statement.G41)
+      {
+        usingCutterComp = true;
+        leftCutterComp = true;
+        
+        // To tell the caller to skip this statement (this method handled it).
+        return true;
+      }
+    if (cmd.type == Statement.G42)
+      {
+        usingCutterComp = true;
+        leftCutterComp = false;
+        return true;
+      }
+    if (cmd.type == Statement.G40)
+      {
+        usingCutterComp = false;
+        return true;
+      }
+    
+    // Not this method's problem. Someone else handles it.
+    return false;
+  }
+
+  private static boolean noteAxis(Statement cmd) {
   
     // Check for G17/18/19, for setting the plane and change the machine state.
     // Return true if one of these was present.
@@ -183,7 +213,23 @@ public class Translator {
     return false;
   }
   
-  private static boolean handleUnits(Statement cmd) {
+  private static boolean noteTravelMode(Statement cmd) {
+    
+    if (cmd.type == Statement.G00)
+      {
+        rapidTravel = true;
+        return true;
+      }
+    if (cmd.type == Statement.G01)
+      {
+        rapidTravel = false;
+        return true;
+      }
+    
+    return false;
+  }
+  
+  private static boolean noteUnits(Statement cmd) {
     
     // If this is a G20/21, note it in the state and return true.
     if (cmd.type == Statement.G20)
@@ -200,7 +246,7 @@ public class Translator {
     return false;
   }
   
-  private static boolean handlePolar(Statement cmd) {
+  private static boolean notePolar(Statement cmd) {
     
     // If this is a G15/16, note it in the state, and return true.
     if (cmd.type == Statement.G15)
@@ -217,21 +263,281 @@ public class Translator {
     return false;
   }
   
-  private static boolean handleTravel(Statement cmd) {
+  private static boolean noteIncremental(Statement cmd) {
     
-    if (cmd.type == Statement.G00)
+    // If this is a G90/91, note it in the state, and return true.
+    if (cmd.type == Statement.G90)
       {
-        rapidTravel = true;
+        usingIncremental = false;
         return true;
       }
-    if (cmd.type == Statement.G01)
+    if (cmd.type == Statement.G91)
       {
-        rapidTravel = false;
+        usingIncremental = true;
         return true;
       }
     
     return false;
   }
+  
+  private static boolean initialChecks(LLNode<Statement> curNode) {
+    
+    // Deal with a bunch of similar cases that must be handled each time
+    // through doLayers(). None of these things are to be removed from the
+    // wip; they are simply skipped over and left in place.
+    
+    // Commands that have no effect, but need to remain.
+    if (handleSkippable(curNode) == true) return true;
+    
+    // Travel mode (G00 or G01).
+    if (noteTravelMode(curNode.data) == true) return true;
+
+    // Not something handled here.
+    return false;
+  }
+  
+
+  private static boolean removedChecks(LLNode<Statement> curNode) {
+    
+    // As above, but for things that *are* removed from the wip.
+    if (curNode == null) return false;
+    if (curNode.data == null) return false;
+    
+    // G20/21 for inch/mm.
+    if (noteUnits(curNode.data) == true) return true;
+    
+    // Polar and absolute modes are mutually exclusive, and that messes
+    // things up a little. If the user attempts to go into polar+absolute
+    // mode, then the statement is converted to an ERROR and it is *not*
+    // to be removed from the wip. However, the mode change *is* noted, 
+    // and the moves that eventually result are likely to be gibberish.
+    boolean polarChange = notePolar(curNode.data);     // G15/16
+    boolean incChange = noteIncremental(curNode.data); // G90/91
+    
+    if ((polarChange == true) || (incChange == true))
+      {
+        // One of the modes changes. Was it in error?
+        if ((usingIncremental == false) && (usingPolar == true))
+          {
+            // No can do. Change to an ERROR and do not remove from the wip.
+            curNode.data = formError(curNode.data,
+                "may not be in polar and absolute mode at the same time");
+            return false;
+          }
+        
+        // Did change, and was permissible. So remove the statement.
+        return true;
+      }
+    
+    // The choice of axis (G17/8/19) and cutter comp are messy for similar
+    // reasons. Cutter comp is only allowed in the XY-plane (G17).
+    // Note that this is one reason cutter comp is tracked at an early stage
+    // (before ThruCutterComp); another reason is that you can't change the
+    // PRZ while using cutter comp.
+    boolean compChange = noteCutterComp(curNode.data);
+    boolean axisChange = noteAxis(curNode.data);
+    
+    if ((compChange == true) || (axisChange == true))
+      {
+        // One of them changed. In a permissible way?
+        if ((usingCutterComp == true) && (curAxis != AxisChoice.XY))
+          {
+            curNode.data = formError(curNode.data,
+                "cutter comp requires the XY-plane");
+            return false;
+          }
+        
+        return true;
+      }
+    
+    // Whatever the statement is, leave it there.
+    return false;
+  }
+	
+  
+  ///////////////////////////////////////////////////////////////////
+  //
+  // Code to check for various errors in the code.
+  // These tend to be more sophisticated problems than (say) syntax.
+  //
+  ///////////////////////////////////////////////////////////////////
+  
+
+  private static boolean checkArcError(Statement cmd) {
+    
+    // Check whether there are any inconsistencies in the given Statement,
+    // assuming it is a G02/03 for an arc move.
+    // 
+    // Return true if there is an error; false otherwise. If there was
+    // an error, then the statement is changed to the corresponding error.
+    if ((cmd.type != Statement.G02) && (cmd.type != Statement.G03))
+      return false;
+    
+    // Not allowed to do G02/03 in polar mode.
+    if (usingPolar == true)
+      {
+        cmd.type = Statement.ERROR;
+        cmd.error = formError(cmd.lineNumber,
+          "circular interpolation not allowed with polar coordinates");
+        
+        // Probably pointless, but doesn't hurt:
+        cmd.data = null;
+        return true;
+      }
+    
+    // Make sure that the arc specification is consistent with the choice
+    // of plane. For instance, you can't use a K-value with G17.
+    DataCircular theMove = (DataCircular) cmd.data;
+    if (curAxis == AxisChoice.XY)
+      {
+        if (theMove.kDefined == true)
+          {
+            cmd.type = Statement.ERROR;
+            cmd.error = formError(cmd.lineNumber,
+                "may not use K in the XY-plane (G17)");
+            cmd.data = null;
+            return true;
+          }
+      }
+    else if (curAxis == AxisChoice.ZX)
+      {
+        if (theMove.jDefined == true)
+          {
+            cmd.type = Statement.ERROR;
+            cmd.error = formError(cmd.lineNumber,
+                "may not use J in the ZX-plane (G18)");
+            cmd.data = null;
+            return true;
+          }
+      }
+    else
+      {
+        // Must be the YZ-plane.
+        if (theMove.iDefined == true)
+          {
+            cmd.type = Statement.ERROR;
+            cmd.error = formError(cmd.lineNumber,
+                "may not use I in the YZ-plane (G19)");
+            cmd.data = null;
+            return true;
+          }
+      }
+    
+    // No errors.
+    return false;
+  }
+  
+  private static boolean checkForFeedRate(Statement cmd) {
+    
+    // A move in normal travel (not rapid) requires a positive feed rate.
+    // Return true if there is an error, after changing cmd to an ERROR.
+    if (cmd.type != Statement.MOVE)
+      return false;
+    
+    DataMove m = (DataMove) cmd.data;
+    
+    if (rapidTravel == true)
+      {
+        // Feed rate is known: at "rapid" speed. If the user *did* give
+        // a feed rate, then consider it an error.
+        if (m.fDefined == true)
+          {
+            cmd.type = Statement.ERROR;
+            cmd.error = formError(cmd.lineNumber,
+                "feed rate given in rapid travel mode");
+            cmd.data = null;
+            return true;
+          }
+        
+        return false;
+      }
+    
+    // Got here, so a normal (not rapid) move. There must be a feed rate.
+    if ((m.fDefined == true) && (m.fValue > 0.0))
+      // The move specifies the feed rate explicitly.
+      // It's tempting to update storedFeedRate here, but the units may change.
+      return false;
+    
+    if (curFeedRate <= 0.0)
+      {
+        cmd.type = Statement.ERROR;
+        cmd.error = formError(cmd.lineNumber,"move requires a feed rate");
+        cmd.data = null;
+        return true;
+      }
+    
+    return false;
+  }
+  
+  private static boolean checkPRZChange(Statement cmd) {
+    
+    // If the cmd is one of the commands that changes the PRZ (G52, etc.),
+    // and we are in certain modes where that's not allowed, then convert
+    // cmd to an error statement.
+    if ((cmd.type != Statement.G52) && (cmd.type != Statement.G54) &&
+        (cmd.type != Statement.G55) && (cmd.type != Statement.G56) &&
+        (cmd.type != Statement.G57) && (cmd.type != Statement.G58) &&
+        (cmd.type != Statement.G59) && (cmd.type != Statement.G92))
+      return false;
+    
+    // Got here, so check.
+    if (usingPolar == true)
+      {
+        cmd.type = Statement.ERROR;
+        cmd.error = formError(cmd.lineNumber,
+          "changing the PRZ is not allowed while in polar mode");
+        
+        // Probably pointless, but doesn't hurt:
+        cmd.data = null;
+        return true;
+      }
+    if (usingIncremental == true)
+      {
+        cmd.type = Statement.ERROR;
+        cmd.error = formError(cmd.lineNumber,
+          "changing the PRZ is not allowed while in incremental mode");
+        cmd.data = null;
+        return true;
+      }
+    if (usingCutterComp == true)
+      {
+        cmd.type = Statement.ERROR;
+        cmd.error = formError(cmd.lineNumber,
+          "changing the PRZ is not allowed while using cutter comp");
+        cmd.data = null;
+        return true;
+      }
+    
+    return false;
+  }
+  
+  private static boolean errorChecks(LLNode<Statement> curNode) {
+    
+    // Look for various problems; if one is found, then the corresponding
+    // statement is changed to ERROR type (with a message) and return true.
+    if (curNode == null) return false;
+    if (curNode.data == null) return false;
+    Statement cmd = curNode.data;
+    
+    // Certain syntax/geometry errors.
+    if (checkArcError(cmd) == true) return true;
+    
+    // You can't move if there's no feed rate.
+    if (checkForFeedRate(cmd) == true) return true;
+    
+    // Can't change the PRZ while in certain modes.
+    if (checkPRZChange(cmd) == true) return true;
+    
+    return false;
+  }
+  
+  
+  ///////////////////////////////////////////////////////////////////
+  //
+  // Handle change in units, inch vs. mm.
+  //
+  ///////////////////////////////////////////////////////////////////
+
   
   private static double toNatural(double u) {
     
@@ -239,11 +545,11 @@ public class Translator {
     // the machine. E.g., if this is a metric machine, but we are currently in
     // inch mode, then inches must be converted to millimeters.
     
-    if (MachineState.machineInchUnits == curInch)
+    if (DefaultMachine.inchUnits == curInch)
       // Nothing to do. 
       return u;
     
-    if (MachineState.machineInchUnits == true)
+    if (DefaultMachine.inchUnits == true)
       // This is an inch machine, but u is in millimeters.
       return u / 25.40;
     
@@ -255,14 +561,15 @@ public class Translator {
     
     // Convert units for linear moves to the machine standard.
     // Polar coordinate mode can make this tricky.
-    if (MachineState.machineInchUnits == curInch)
-      // Nothing to do.
-      return;
 //    
 //    System.out.println("machine inch is " +MachineState.machineInchUnits);
 //    System.out.println("current inch is " +curInch);
     
     DataMove theMove = (DataMove) cmd.data;
+    
+    if (theMove.fDefined == true)
+      theMove.fValue = toNatural(theMove.fValue);
+    
     if (usingPolar == false)
       {
         if (theMove.xDefined == true)
@@ -271,8 +578,6 @@ public class Translator {
           theMove.yValue = toNatural(theMove.yValue);
         if (theMove.zDefined == true)
           theMove.zValue = toNatural(theMove.zValue);
-        if (theMove.fDefined == true)
-          theMove.fValue = toNatural(theMove.fValue);
       }
     else
       {
@@ -302,74 +607,10 @@ public class Translator {
           }
       }
   }
-
-  private static boolean checkArcError(Statement cmd) {
-    
-    // Check whether there are any inconsistencies in the given Statement,
-    // assumed to be a G02/03 for an arc move.
-    // 
-    // Return true if there is an error; false otherwise. If there was
-    // an error, then the statement is changed to the corresponding error.
-    
-    // Not allowed to do G02/03 in polar mode.
-    if (usingPolar == true)
-      {
-        cmd.type = Statement.ERROR;
-        cmd.error = formError(cmd.lineNumber,
-          "circular interpolation not allowed with polar coordinates");
-        
-        // Probably pointless, but doesn't hurt:
-        cmd.data = null;
-        return true;
-      }
-    
-    // Make sure that the arc specification is consistent with the choice
-    // of plane. For instance, you can't use a K-value with G17.
-    DataCircular theMove = (DataCircular) cmd.data;
-    if (curAxis == AxisChoice.XY)
-      {
-        if (theMove.kDefined == true)
-          {
-            cmd.type = Statement.ERROR;
-            cmd.error = formError(cmd.lineNumber,
-                "may not use K in the XY-plane (G17)");
-            return true;
-          }
-      }
-    else if (curAxis == AxisChoice.ZX)
-      {
-        if (theMove.jDefined == true)
-          {
-            cmd.type = Statement.ERROR;
-            cmd.error = formError(cmd.lineNumber,
-                "may not use J in the ZX-plane (G18)");
-            return true;
-          }
-      }
-    else
-      {
-        // Must be the YZ-plane.
-        if (theMove.iDefined == true)
-          {
-            cmd.type = Statement.ERROR;
-            cmd.error = formError(cmd.lineNumber,
-                "may not use I in the YZ-plane (G19)");
-            return true;
-          }
-      }
-    
-    // No errors.
-    return false;
-  }
   
   private static void convertArcUnits(Statement cmd) {
     
     // Adjust arcs to be in the standard units: inches or mm.
-    
-    if (MachineState.machineInchUnits == curInch)
-      // Nothing to do.
-      return;
-    
     DataCircular theMove = (DataCircular) cmd.data;
     if (theMove.xDefined == true)
       theMove.X = toNatural(theMove.X);
@@ -392,29 +633,34 @@ public class Translator {
       theMove.F = toNatural(theMove.F);
   }
   
-  private static boolean convertUnits(Statement cmd) {
+  private static void convertTLOUnits(Statement cmd) {
     
-    // Convert arc and linear moves to machine units (inch/mm). This depends
-    // on the reference plane (G17/18/91). Also check arcs for geometry 
-    // errors. If there is an error, then cmd is changed to an error statement.
-    // 
-    // Return true iff one of MOVE or G02/03 appears.
-    // Remember: G00 and G01 only change the mode; they do not carry data
-    // about moving the cutter.
+    DataTLO tlo = (DataTLO) cmd.data;
+    if (tlo.hasZ == true)
+      tlo.zValue = toNatural(tlo.zValue);
+  }
+  
+  private static void convertUnits(Statement cmd) {
+    
+    // Convert cmd to machine units (inch/mm). Obviously, linear and arc moves
+    // must be converted, but other things need conversion too.
+    if (DefaultMachine.inchUnits == curInch)
+      // Nothing to do.
+      return;
+    
     if (cmd.type == Statement.MOVE)
-      {
-        convertLineUnits(cmd);
-        return true;
-      }
-
-    if ((cmd.type == Statement.G02) || (cmd.type == Statement.G03))
-      {
-        if (checkArcError(cmd) == false)
-          convertArcUnits(cmd);
-        return true;
-      }
+      convertLineUnits(cmd);
     
-    return false;
+    if ((cmd.type == Statement.G02) || (cmd.type == Statement.G03))
+      convertArcUnits(cmd);
+    
+    if ((cmd.type == Statement.G43)|| (cmd.type == Statement.G44))
+      convertTLOUnits(cmd);
+      
+    // This reuses the code for linear moves, and that's fine because
+    // G52 and G92 may only appear outside of polar (and incremental) mode.
+    if ((cmd.type == Statement.G52) || (cmd.type == Statement.G92))
+      convertLineUnits(cmd);
   }
   
   
@@ -430,13 +676,14 @@ public class Translator {
   
   
   
+
+  ///////////////////////////////////////////////////////////////////
+  //
+  // Cutter comp stuff
+  //
+  ///////////////////////////////////////////////////////////////////
   
-  
-  
-  
-  
-  
-  
+
   
   
   
@@ -446,6 +693,299 @@ public class Translator {
   
   
 
+  ///////////////////////////////////////////////////////////////////
+  //
+  // Stuff to change PRZ: G52, G54-59 and G92.
+  //
+  ///////////////////////////////////////////////////////////////////
+  
+  
+  private static void useWorkOffset(int i) {
+    xPRZ = DefaultMachine.workOffsets.offset[i][0];
+    yPRZ = DefaultMachine.workOffsets.offset[i][1];
+    zPRZ = DefaultMachine.workOffsets.offset[i][2];
+  }
+  
+  private static boolean changePRZ(Statement cmd) {
+    
+    // Return true iff the cmd does adjust the PRZ and should be removed
+    // from the wip.
+    if ((cmd.type != Statement.G52) && (cmd.type != Statement.G54) &&
+        (cmd.type != Statement.G55) && (cmd.type != Statement.G56) &&
+        (cmd.type != Statement.G57) && (cmd.type != Statement.G58) &&
+        (cmd.type != Statement.G59) && (cmd.type != Statement.G92))
+      return false;
+    
+    if (cmd.type == Statement.G52)
+      {
+        // The (x,y,z) value given with the command, expressed relative to
+        // machine zero, becomes the new PRZ.
+        DataMove move = (DataMove) cmd.data;
+        xPRZ = move.xValue;
+        yPRZ = move.yValue;
+        zPRZ = move.zValue;
+        return true;
+      }
+
+    if (cmd.type == Statement.G92)
+      {
+        // Set a new PRZ so that the (x,y,z) value given with the command
+        // becomes the current location. Put another way: imagine a move
+        // to the given (x,y,z) under the current PRZ, then do a bare G92
+        // so that the location we just moved to becomes (0,0,0).
+        
+        // The value given is relative to the current tool position. Express
+        // that position relative to machine zero.
+        DataMove move = (DataMove) cmd.data;
+        double x = move.xValue + xCur;
+        double y = move.yValue + yCur;
+        double z = move.zValue + zCur;
+        
+        // This (x,y,z) should be (0,0,0) under the new PRZ.
+        xPRZ = x;
+        yPRZ = y;
+        zPRZ = z;
+        
+        return true;
+      }
+
+    if (cmd.type == Statement.G54)
+      {
+        useWorkOffset(0);
+        return true;
+      }
+    if (cmd.type == Statement.G55)
+      {
+        useWorkOffset(1);
+        return true;
+      }
+    if (cmd.type == Statement.G56)
+      {
+        useWorkOffset(2);
+        return true;
+      }
+    if (cmd.type == Statement.G57)
+      {
+        useWorkOffset(3);
+        return true;
+      }
+    if (cmd.type == Statement.G58)
+      {
+        useWorkOffset(4);
+        return true;
+      }
+    if (cmd.type == Statement.G59)
+      {
+        useWorkOffset(5);
+        return true;
+      }
+    
+    // Somehow (?) fell through.
+    return false;
+  }
+
+  private static boolean handlePRZ(Statement cmd) {
+    
+    // First, the PRZ might be changing due to G52, etc.
+    if (changePRZ(cmd) == true) return true;
+    
+    // Adjust any motion commands to be given relative to machine zero,
+    // whatever the PRZ may be. This is different than the distinction
+    // between absolute and incremental coordinates. So, this may change
+    // MOVE, G02 and G03.
+    // But this is done only while in absolute mode.
+    if (usingIncremental == true) return false;
+    
+    if (cmd.type == Statement.MOVE)
+      {
+        DataMove m = (DataMove) cmd.data;
+        if (m.xDefined == true) m.xValue += xPRZ;
+        if (m.yDefined == true) m.yValue += yPRZ;
+        if (m.zDefined == true) m.zValue += zPRZ;
+      }
+    else if ((cmd.type == Statement.G02) || (cmd.type == Statement.G03))
+      {
+        // G02 and G03 take the form
+        // G02 X## Y## Z## I## J## K## R## F##
+        // and may use I/J/K or R to specify the radius, but not both.
+        // The tool moves from its current location to the given (X,Y,Z)
+        // and I/J/K (or R) is used to determine the radius. Recall that
+        // the IJK values are inherently relative (or incremental). They
+        // indicate the position of the center of the arc, measured from
+        // the cutter's starting point.
+        DataCircular c = (DataCircular) cmd.data;
+        if (c.xDefined == true) c.X += xPRZ;
+        if (c.yDefined == true) c.Y += yPRZ;
+        if (c.zDefined == true) c.Z += zPRZ;
+      }
+    
+    return false;
+  }
+  
+  
+  ///////////////////////////////////////////////////////////////////
+  //
+  // Code for conversion from polar coordinates.
+  //
+  ///////////////////////////////////////////////////////////////////
+  
+  
+  private static void convertPolar(LLNode<Statement> curNode) {
+    
+    // If in polar mode, convert the given command to cartesian coordinates.
+    // Note that errorChecks() should have caught use of things like G02/03
+    // while in polar mode. What appears here should be either a linear
+    // move or something that can be ignored.
+    if (usingPolar == false) return;
+    
+    Statement cmd = curNode.data;
+    if (cmd.type != Statement.MOVE) return;
+    
+    DataMove m = (DataMove) cmd.data;
+    
+    // Polar coordinate are only allowed while in incremental mode, and
+    // that requirement was checked earlier. Requiring incremental mode
+    // simplifies things a lot, and it seems more natural for the user.
+    // In (much) earlier versions of the program, I allowed polar and
+    // absolute modes to mix. It could be done, but it's messy and it's
+    // hard to imagine a legitimate use for it. The big issue is that
+    // there is no sensible machine zero to use as the origin of the 
+    // polar coordinate system.
+    //
+    // Another attitude would be to say that going into polar coordinate mode
+    // implicitly puts you in incremental mode, and you don't need to put a 
+    // G91 into the code. That would work too, but it does seem worth requiring
+    // the user to put in a G90 as a reminder that things are different.
+    
+    // These are just different enough that being DRY isn't worth it.
+    if (curAxis == AxisChoice.XY)
+      {
+        // X = radius, Y = angle. 
+        if (m.xDefined == false)
+          {
+            curNode.data = formError(cmd,"no radius (X) given");
+            return;
+          }
+        
+        double radius = m.xValue;
+        
+        double angle = 0.0;
+        if (m.yDefined == true)
+          angle = m.yValue;
+        
+        angle = angle * Math.PI / 180.0;
+        
+        double x = radius * Math.cos(angle);
+        double y = radius * Math.sin(angle);
+        
+        // Change the underling DataMove to reflect this.
+        m.xDefined = true;
+        m.xValue = x;
+        m.yDefined = true;
+        m.yValue = y;
+      }
+    else if (curAxis == AxisChoice.ZX)
+      {
+        // Z = radius, X = angle. 
+        if (m.zDefined == false)
+          {
+            curNode.data = formError(cmd,
+                "no radius (Z) given -- in G18 mode (ZX-plane)");
+            return;
+          }
+        
+        double radius = m.zValue;
+        
+        double angle = 0.0;
+        if (m.xDefined == true)
+          angle = m.xValue;
+        
+        angle = angle * Math.PI / 180.0;
+        
+        double z = radius * Math.cos(angle);
+        double x = radius * Math.sin(angle);
+        
+        m.zDefined = true;
+        m.zValue = z;
+        m.xDefined = true;
+        m.xValue = x;
+      }
+    else
+      {
+        // Must be the AxisChoice.YZ case. Y = radius, Z = angle.
+        if (m.yDefined == false)
+          {
+            curNode.data = formError(cmd,
+                "no radius (Y) given -- in G19 mode (YZ-plane)");
+            return;
+          }
+        
+        double radius = m.yValue;
+        
+        double angle = 0.0;
+        if (m.zDefined == true)
+          angle = m.zValue;
+        
+        angle = angle * Math.PI / 180.0;
+        
+        double y = radius * Math.cos(angle);
+        double z = radius * Math.sin(angle);
+        
+        m.yDefined = true;
+        m.yValue = y;
+        m.zDefined = true;
+        m.zValue = z;
+      }
+  }
+  
+  
+  ///////////////////////////////////////////////////////////////////
+  //
+  // Code for conversion from incremental to absolute coordinates.
+  //
+  ///////////////////////////////////////////////////////////////////
+  
+  
+  private static void convertIncremental(LLNode<Statement> curNode) {
+  
+    // Convert all statements to absolute coordinates.
+    // The things that may need to be translated are: MOVE, G02 and G03. 
+    // Note that G52 and G54-59 are *not* translated. G92 isn't either since
+    // it is inherently an incremental concept.
+    
+    // Obviously, we only convert from incremental coordinates if we are
+    // in incremental mode.
+    if (usingIncremental == false) return;
+    
+    if (curNode == null) return;
+    if (curNode.data == null) return;
+    
+    Statement cmd = curNode.data;
+    
+    if (cmd.type == Statement.MOVE)
+      {
+        DataMove m = (DataMove) cmd.data;
+        if (m.xDefined == true)  m.xValue += xCur;
+        if (m.yDefined == true)  m.yValue += yCur;
+        if (m.zDefined == true)  m.zValue += zCur;
+      }
+    else if ((cmd.type == Statement.G02) || (cmd.type == Statement.G03))
+      {
+        // G02 and G03 take the form
+        // G02 X## Y## Z## I## J## K## R## F##
+        // and may use I/J/K or R to specify the radius, but not both.
+        // The tool moves from its current location to the given (X,Y,Z)
+        // and I/J/K (or R) is used to determine the radius. Recall that
+        // the IJK values are inherently relative (or incremental). They
+        // indicate the position of the center of the arc, measured from
+        // the cutter's starting point.
+        DataCircular c = (DataCircular) cmd.data;
+        if (c.xDefined == true) c.X += xCur;
+        if (c.yDefined == true) c.Y += yCur;
+        if (c.zDefined == true) c.Z += zCur;
+      }
+  }
+  
   
   ///////////////////////////////////////////////////////////////////
   //
@@ -574,80 +1114,6 @@ public class Translator {
     
     // Got here, so the class is known and loaded. Run it.
     return theWizard.execute(wiz.args);
-  }
-  
-  
-  
-  
-  
-
-  
-  ///////////////////////////////////////////////////////////////////
-  //
-  // Code for "skippable" commands.
-  //
-  ///////////////////////////////////////////////////////////////////
-  
-  
-//  private static LLNode<Statement> handleSkippable(LLNode<Statement> curNode) {
-  private static boolean handleSkippable(LLNode<Statement> curNode) {
-    
-
-    // Return true to skip over any single statement (without removing it from the wip) that 
-    // doesn't affect the translation but that could affect a simulation, or 
-    // that might be important to a physical machine, like M07 for 
-    // 'coolant on', etc.
-
-    if (curNode == null) return false;
-    
-    Statement cur = curNode.data;
-    
-    // Skip over any errors that were inserted at some earlier stage.
-    if (cur.type == Statement.ERROR) return true;
-
-    if (cur.type == Statement.M00) return true;
-    if (cur.type == Statement.M01) return true;
-    if (cur.type == Statement.M03) return true;
-    if (cur.type == Statement.M04) return true;
-    if (cur.type == Statement.M05) return true;
-    if (cur.type == Statement.M06) return true;
-    if (cur.type == Statement.M07) return true;
-    if (cur.type == Statement.M08) return true;
-    if (cur.type == Statement.M09) return true;
-    if (cur.type == Statement.M40) return true;
-    if (cur.type == Statement.M41) return true;
-    if (cur.type == Statement.M48) return true;
-    if (cur.type == Statement.M49) return true;
-    
-    return false;
-    
-    /*
-    
-    // Skip over any single statement (without removing it from the wip) that 
-    // doesn't affect the translation but that could affect a simulation, or 
-    // that might be important to a physical machine, like M07 for 
-    // 'coolant on', etc.
-    if (curNode == null) return null;
-    
-    Statement cur = curNode.data;
-    
-    // Skip over any errors that were inserted at some earlier stage.
-    if (cur.type == Statement.ERROR) return curNode.next;
-    
-    if (cur.type == Statement.M03) return curNode.next;
-    if (cur.type == Statement.M04) return curNode.next;
-    if (cur.type == Statement.M05) return curNode.next;
-    if (cur.type == Statement.M06) return curNode.next;
-    if (cur.type == Statement.M07) return curNode.next;
-    if (cur.type == Statement.M08) return curNode.next;
-    if (cur.type == Statement.M09) return curNode.next;
-    if (cur.type == Statement.M40) return curNode.next;
-    if (cur.type == Statement.M41) return curNode.next;
-    if (cur.type == Statement.M48) return curNode.next;
-    if (cur.type == Statement.M49) return curNode.next;
-    
-    return curNode;
-    */
   }
   
   
@@ -1005,9 +1471,9 @@ public class Translator {
         String choice = (String) arg;
        
         if (choice.equals("inch"))
-          MachineState.machineInchUnits = true;
+          DefaultMachine.inchUnits = true;
         else
-          MachineState.machineInchUnits = false;
+          DefaultMachine.inchUnits = false;
       }
     else
       {
@@ -1086,23 +1552,113 @@ public class Translator {
   // Main entry-point and high-level management.
   //
   ///////////////////////////////////////////////////////////////////
+	
+	private static void finalStep(LLNode<Statement> curNode) {
+	  
+	  // The last step of the primary digestive loop (before cutter comp).
+	  // An arc is brought to standard from (I/J/K, not radius) and note
+	  // where the statement takes the cutter.  At this point, all coordinates
+	  // are in absolute terms, relative to machine zero.
+	  if (curNode == null) return;
+	  if (curNode.data == null) return;
+	  Statement cmd = curNode.data;
+	  
+    // Convert an arc move to a standard form that uses I/J/K instead
+    // of the radius.
+    if ((cmd.type == Statement.G02) || (cmd.type == Statement.G03))
+      {
+        // This thing throws if there is a geometric problem. I'm not keen on
+        // that, but it seems simplest.
+        ArcCurve c = null;
+        try {
+          c = ArcCurve.factory(xCur,yCur,zCur,curAxis,cmd);
+        } catch (Exception e) {
+          
+          // Geometry is wrong.
+          curNode.data = formError(cmd,e.getMessage());
+          return;
+        }
+        
+        // Arc is geometrically valid. Express it in standard form.
+        curNode.data = c.toStatement();
+        
+        // And note where the tool ends up.
+        DataCircular a = (DataCircular) curNode.data.data;
+        if (a.F > 0.0) curFeedRate = a.F;
+        if (a.xDefined == true) xCur = a.X;
+        if (a.yDefined == true) yCur = a.Y;
+        if (a.zDefined == true) zCur = a.Z;
+        
+        return;
+      }
+    
+	  if (cmd.type == Statement.MOVE)
+	    {
+	      DataMove m = (DataMove) cmd.data;
+	      if (m.fDefined == true) curFeedRate = m.fValue;
+        if (m.xDefined == true) xCur = m.xValue;
+        if (m.yDefined == true) yCur = m.yValue;
+        if (m.zDefined == true) zCur = m.zValue;
+	      return;
+	    }
+	}
+	
+  private static void resetMachine() {
+    
+    // Call this before a translation so that the machine starts off in its
+    // default state. Note that we use Persist.reload() to go all the way back
+    // to the settings stored in the .ger directory. A previous run may have
+    // changed the values in MachineState -- for example a call to the
+    // SetUnits directive made by a previous run or a change to the tool table.
+    Persist.reload();
+    
+    rapidTravel = false;
+    curInch = DefaultMachine.inchUnits;
+    curAxis = AxisChoice.XY;
+    usingPolar = false;
+    usingIncremental = false;
+    curFeedRate = -1.0;
+    usingCutterComp = false;
 
+    xPRZ = 0.0;
+    yPRZ = 0.0;
+    zPRZ = 0.0;
+
+    xCur = 0.0;
+    yCur = 0.0;
+    zCur = 0.0;
+  }
+  
+  private static String formError(int lineNumber,String msg) {
+    
+    return "Error on line " +lineNumber+ ": " +msg;
+  }
+
+  private static Statement formError(Statement s,String msg) {
+    
+    // BUG: This is a much better way to do things.
+    // See if I can get rid of the "other" formError() in all classes that do this.
+    
+    Statement answer = new Statement(Statement.ERROR);
+    answer.lineNumber = s.lineNumber;
+    answer.error = formError(s.lineNumber,msg);
+    return answer;
+  }
 	
 	private static void doLayers(int depth) {
 	
 	  // Translate up to the given depth. The output appears in this.wip.
     // The initial parsing to the wip was done by the caller.
-	  if (depth <= ThruParser)
-	    return;
+	  if (depth <= ThruParser) return;
 
-	  // The machine and its state are only relevant after parsing.
+	  // The machine and its state are only relevant after parsing, but
+	  // must be reset to "factory settings."
     resetMachine();
     
 	  // The first couple of layers are handled as special cases. Machine 
 	  // directives are simply acted upon and removed from the wip.
 	  machineDirectiveLayer();
-	  if (depth <= ThruDirectives)
-	    return;
+	  if (depth <= ThruDirectives) return;
 	  
 	  // And sub-programs are an even more special case because they require 
 	  // infinite look-ahead.
@@ -1110,8 +1666,7 @@ public class Translator {
 	  if (subProgramLayer() == false)
 	    // For certain errors, like reusing an O-code, there is no recovery.
 	    return;
-	  if (depth <= ThruSubProgs)
-	    return;
+	  if (depth <= ThruSubProgs) return;
 	  
     // For the remaining cases, we take a single statement out of the wip, and 
 	  // digest it to "final form." In some cases the statement is removed from
@@ -1127,74 +1682,36 @@ public class Translator {
 	  // mode (G15/16). We must consider the code statement-by-statement and
 	  // not layer-by-layer due to the way each statement can change the machine
 	  // state for statements that follow.
-	  //
-	  // The way this "digestion loop" happens is verbose, but easier to manage. 
-	  // Instead of letting the sub-routines manipulate the wip, that is (mostly)
-	  // done here. Things could be made tidier by pulling out some of these
-	  // calls and wrapping them in a function that returns one of several
-	  // values, like "keep going" or "remove curNode and continue" or "skip
-	  // curNode and contine," but I'm not sure it's worth doing.
 	  LLNode<Statement> curNode = wip.head;
 	  while (curNode != null)
-      { 
-        // Don't enter this loop unless depth is at least as large as ThruUnits;
-        // otherwise curNode might never advance and the loop will be infinite.
-        
-        // Certain commands have no effect on the translation, but shouldn't
-        // be filtered out either.
-        boolean skip = handleSkippable(curNode);
+      {
+        // Check for mode changes and skippable statements. These are things
+        // that remain in the wip.
+        boolean skip = initialChecks(curNode);
         if (skip == true)
           {
             curNode = curNode.next;
             continue;
           }
         
-        if (depth >= ThruUnits)
+        // These are things that *are* removed from the WIP, mostly 
+        // mode changes.
+        skip = removedChecks(curNode);
+        if (skip == true)
           {
-            // G17/18/19
-            skip = handleAxis(curNode.data);
-            if (skip == true)
-              {
-                curNode = curNode.next;
-                continue;
-              }
-            
-            // G20/21.
-            skip = handleUnits(curNode.data);
-            if (skip == true)
-              {
-                // For this one, we remove it from the WIP. 
-                curNode = wip.removeGet(curNode);
-                continue;
-              }
-            
-            // Note whether in G00 or G01 mode.
-            skip = handleTravel(curNode.data);
-            if (skip == true)
-              { 
-                curNode = curNode.next;
-                continue;
-              }
-            
-            // Unit conversion and syntax/geometry check.
-            skip = convertUnits(curNode.data);
-            if (skip == true)
-              { 
-                curNode = curNode.next;
-                continue;
-              }
+            curNode = wip.removeGet(curNode);
+            continue;
           }
         
-        // BUG: I had this as part of ThruUnits, but it's complicated and I
-        // want to wait on it.
-        // If present, G15/16 also gets noted and removed.
-//        skip = handlePolar(curNode.data);
-//        if (skip == true)
-//          { 
-//            curNode = wip.removeGet(curNode);
-//            continue;
-//          }
-        
+        // If there's a problem with the current statement, convert it to
+        // type ERROR, with a message.
+        skip = errorChecks(curNode);
+        if (skip == true)
+          {
+            curNode = curNode.next;
+            continue;
+          }
+
         if (depth >= ThruWizards)
           {
             // Wizards are a messier case due to expansion.
@@ -1206,25 +1723,51 @@ public class Translator {
                 continue;
               }
           }
-          
         
+        if (depth >= ThruUnits)
+          // Convert to the default units for the machine. 
+          convertUnits(curNode.data);
         
-        // Everything in the old version up through Layer01 is here.
-        // Still need to bring over Layer02 (TLO and work offsets),
-        // Layer03 (polar coordinates), Layer04 (absolute/incremental),
-        // and Layer05 (cutter comp).
+        if (depth >= ThruWorkOffsets)
+          {
+            // The various ways of changing PRZ: G52, G54-59 and G92.
+            // This also converts any motion commands to take the PRZ
+            // into account.
+            skip = handlePRZ(curNode.data);
+            if (skip == true)
+              {
+                // For this one, we remove it from the WIP. 
+                curNode = wip.removeGet(curNode);
+                continue;
+              }
+          }
         
+        if (depth >= ThruPolar)
+          convertPolar(curNode);
         
+        if (depth >= ThruIncremental)
+          convertIncremental(curNode);
         
+        // Everything about the curNode statement is now in absolute 
+        // cartesian coordinates, relative to machine zero, using machine
+        // units. Last thing is to note where the cutter moves and
+        // translate arcs to a standard form (explicit center, no radius).
+        finalStep(curNode);
+        
+        curNode = curNode.next;
       }
 	  
 	  
 	  // Because cutter comp requires look-ahead, it has to be done last,
-	  // outside the loop above, when all the various moves have been settled.
+	  // outside the loop above, after all the various moves have been settled.
 	  // This should also be clearer to the user. If you allow wizards to get
 	  // mixed up with cutter comp, then all kinds of edge-cases arise.
+	  //
+	  // At this point, most of the modes for the machine are irrelevant.
+	  // Put another way, the machine is always using absolute cartesian
+	  // coordinates, relative to machine zero, in the default units.
 	  
-	  
+	  // Reset the machine, and start over....
 	  
 	  
 	}
@@ -1262,17 +1805,12 @@ public class Translator {
     if (depth == ThruLexer)
       return Lexer.digestAll(gcode);
     
+    // And parsing is always needed for the remaining cases
+    wip = Parser.process(gcode);
+    
     // Maybe we are only parsing.
     if (depth == ThruParser)
-      return Parser.digestAll(gcode);
-    
-    // Invoking Parser is done in every remaining case to get things going.
-    wip = Parser.processToLL(gcode);
-    
-    
-//    System.out.println("Post parser:");
-//    System.out.println(wipToString());
-    
+      return wipToString();
     
     // Translate the code to simpler form.
     doLayers(depth);

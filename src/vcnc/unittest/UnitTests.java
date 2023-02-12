@@ -65,8 +65,9 @@ public class UnitTests {
     
   // For the ThruParser stage.
   private static String[] parseTests = {
-      "parse_test_01"
-     ,"parse_test_02" 
+       "parse_test_01"
+      ,"parse_test_02" 
+      ,"parse_test_03" 
   };
 
   // For the ThruDirectives stage.
@@ -165,7 +166,6 @@ public class UnitTests {
     runTests(directiveTests,Translator.ThruDirectives);
     runTests(subprogTests,Translator.ThruSubProgs);
     runTests(unitsTests,Translator.ThruUnits);
-
     runTests(wizardTests,Translator.ThruWizards);
     
     System.out.println("Unit tests complete.");

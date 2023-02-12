@@ -1,0 +1,140 @@
+
+% Discussion of different way to go about writing a G-code simulator.
+
+\documentclass[titlepage,oneside,10pt]{article}
+
+% Need this for pmatrix (among other things).
+\usepackage{amsmath}
+
+% Needed to include graphics objects (from metapost).
+\usepackage{graphics}
+
+\usepackage{epic,eepic} \setlength\maxovaldiam{60pt}
+
+% So that I don't have to type this all the time.
+\newcommand{\ger}{\textsc{Ger}}
+
+
+% For ``long'' tables.
+\usepackage{longtable}
+
+\begin{document}
+
+\raggedbottom
+
+% These are for marginal notes on the right or left of the main text.
+\newcommand{\mymargin}[1]{\marginpar{\rm\tiny #1}}
+%\newcommand{\mymargin}[1]{\marginpar{\rm\scriptsize #1}}
+\newcommand{\leftmar}[1]{\reversemarginpar \mymargin{#1}}
+
+
+\section{Coordinate Systems}
+
+The coordinate system is inherently tied up with the particular
+physical machine on which the G-code is intended to run. Codes like
+{\tt G28} (machine zero return) are impossible to interpret in a way
+that would be consistent with every machine. Various codes related to
+the coordinate system are accepted by \ger, but ``translated away.''
+
+Machines typically have several notions of coordinate system
+origin. In theory, ``machine zero'' (or ``home'') is a 
+position fixed at the factory\footnote{See Peter
+Smid, \emph{CNC Progrmming Handbook}, 2008 (3rd ed.), p. 153, where he
+says that machine zero
+\begin{quote}
+  ...is the position of all machine slides at one of the extreme
+  travel limits of each axis. Its exact position is determined by the
+  machine manufacturer and is not normally changed during the machine
+  working life.
+  \end{quote}
+In my experience that is not always true. In any case, it would be
+impossible for \ger\ to reflect the quirks of every possible machine. }
+and {\tt G28} should return the cutter to that position. Another form
+of origin is the Part (or Program) Reference Zero (PRZ). The PRZ is
+the coordinate system relative to which most commands are given.
+
+\ger\ defines machine zero and the (initial) PRZ to be the location of
+the tool immediately before the first line of the program. As with
+most real machines, the location of machine zero can't be changed. So,
+the tool always starts at (X,Y,Z) = (0,0,0). \ger\ \emph{does not
+accept the} {\tt G28} {\tt command}; there's very little reason to
+return the tool to (0,0,0), and it's always possible to move there
+with {\tt G00} or {\tt G01} in the usual way.
+
+The important point is that \ger\ will produce code with all coordinates
+given (in absolute terms) using the location of the tool at the start
+of the first line of the program as the orgin. To run the output code
+on a physical machine, the easiest thing do will {\it usually} be to
+set the PRZ to the surface of the lower-left corner of the part. As
+always, consider the possibility of interference and tool crashes.
+
+\subsection{Changing the PRZ}
+
+Use {\tt G52} to make the given values, expressed relative to machine
+zero, the new PRZ. Thus, 
+\begin{verbatim}
+G52 X2.000 Y-4.000 Z1.00
+\end{verbatim}
+means that the location 2 units to the right, 4 units below and 1 unit
+higher than machine zero will be treated as the PRZ in the code that
+follows. Saying
+\begin{verbatim}
+G52 X0 Y0 Z0
+\end{verbatim}
+(or simply {\tt G52}, with no arguments) resets the coordinate system
+to what it was when the program started.
+
+The {\tt G54-G59} commands work the same way, except that the
+arguments come from the work offsets table. That is, {\tt G54} (no
+arguments) is the same as
+\begin{verbatim}
+G52 Xx Yy Zz
+\end{verbatim}
+where {\tt x, y} and {\tt z} are taken from the work offsets table. 
+
+Use {\tt G92} to indicate that the given values should be used as the
+current coordinates under a new PRZ. For example, 
+\begin{verbatim}
+G92 X1.000 Y-1.000 Z2.000
+\end{verbatim}
+means to reset the PRZ so that the cutter's current location is given
+by $(1,-1,2)$. Saying 
+\begin{verbatim}
+G92 X0 Y0 Z0
+\end{verbatim}
+(or simply {\tt G92}, with no arguments) is a convenient way to make
+the current tool location the new PRZ.
+
+\subsection{Tool Length Offset}
+
+The {\tt G40}, {\tt G43} and {\tt G49} commands are used on many
+machines for tool length offset (TLO). This is used to adjust for the
+fact that, when tools are stored in a turret, the location of the
+cutting edges of the various tools will differ. TLO can also be used
+to take cutter wear into account. 
+
+\ger\ accepts these commands, but they pass through unchanged, without
+affecting the surrounding code. In theory, \ger\ could have been
+written to simulate the effect of the TLO commands in more detail, but
+doing so would require that the tool table reflect the irritating
+real-world quirks of various cutters and turrets. The value of \ger's
+translation and simulation is that it allows you to avoid these
+irritations -- or at least, to avert your eyes until they can't be avoided. 
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
+
+
+
+
+
+\end{document}

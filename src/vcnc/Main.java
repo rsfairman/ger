@@ -1,5 +1,10 @@
 package vcnc;
 
+// Annotations:
+// BUG is used for things that definitely further attention, or at least
+// further thought.
+// NOTE is used for things that aren't quite bugs, but that could present
+// problems down the road or that may not be obvious.
 
 // PATH FORWARD (which may change!)
 // * Finish the various layers, pretty much as they're set up.
@@ -333,6 +338,66 @@ GUI has some uglier bits. This is the most basic things, like G20/21 and
 it can expands simple wizards (linear moves only).  
 
 Slowly trashing old code too as things are refactored...
+
+v13
+
+Came to some decisions about things like the work offsets table and tool
+length offset (TLO). The bottom line is that these things rely too much on the
+specifics of any particular physical machine. Instead of trying to unravel
+all the various possibilities, minimize their effects. For example, TLO really
+doesn't matter unless you're on a very specific physical machine setup, so 
+don't even try to simulate it.
+
+Small tweaks to parsing the G52 command in the parser and added the G92
+command to the parser. Made the UI aspect of the work offsets table work
+properly, including making it persist. Then added bit to translator to
+handle these commands with PRZ.
+
+Cut a version here for not particular reason other than I wanted to store
+a copy before making more changes.
+
+v14
+
+Have (in v13) made various changes so that the main translation loop is tidier.
+Now it's time to nail down more of the individual cases.
+
+Polar coordinates done.
+Needed to add a bit for handling changes to PRZ.
+Handling incremental coordinates too.
+
+Started on the last thing to do, before cutter comp, which is tracking the 
+cutter position after the statement has been brought to a form where all
+coordinates are in absolute terms. 
+
+Changed the Lexer/Token in a minor way so that EOF is now unicode \u0000
+instead of '*'. The "correct" solution is for the Tokens to be typed,
+either with an enum or by sub-classes, but that's bloaty.
+
+Got rid of the character count field in the Token objects. In theory, these
+could be used for better error reporting, but they were being almost entirely
+ignored. G-code is so simple that pointing a person to a specific character
+in an error message isn't needed, and could just confusing things since
+the character index might not match up with where a person (as opposed to the
+lexer/parser) thinks it occurs. The character count was just noise.
+
+There was also a field left over in Token.endCount that was used for dealing
+with sub-programs. Under the new scheme, that's no longer needed. This
+required some modest edits in Lexer and Parser, and the returnChar and 
+returnLine fields of DataSubroutineCall are no longer needed for the same 
+reason.
+
+Some top-left cleanup around the interface to the translator, and how
+it interfaces to the parser and lexer -- mostly due to the fact that we've
+refactored to use linked lists.
+
+I have done *some* debugging of this, but nothing extensive.
+
+v15
+
+Although cutter comp isn't done (or ever started) and wizards could be more
+powerful, *and* what exists hasn't really been debugged, it seems the time
+to implement the DA-based (2.5-D) viewer. Eyeballing text isn't the best way
+to debug sometimes.
 
 
 

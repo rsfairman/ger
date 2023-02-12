@@ -371,7 +371,7 @@ syntacially valid statements.
 The coordinate system is inherently tied up with the particular
 physical machine on which the G-code is intended to run. Codes like
 {\tt G28} (machine zero return) are impossible to interpret in a way
-that would be consistent with every machine. Some other codes related to
+that would be consistent with every machine. Various codes related to
 the coordinate system are accepted by \ger, but ``translated away.''
 
 Machines typically have several notions of coordinate system
@@ -422,36 +422,26 @@ G52 X0 Y0 Z0
 (or simply {\tt G52}, with no arguments) resets the coordinate system
 to what it was when the program started.
 
-Often, {\tt G92} is the more useful command.\footnote{This definition of {\tt
-  G92} is not universal. Some FANUC machines work this way, and other
-machines don't. }  The values given with 
-{\tt G92} become the current coordinates under a new PRZ. For example, 
+The {\tt G54-G59} commands work the same way, except that the
+arguments come from the work offsets table. That is, {\tt G54} (no
+arguments) is the same as
+\begin{verbatim}
+G52 Xx Yy Zz
+\end{verbatim}
+where {\tt x, y} and {\tt z} are taken from the work offsets table. 
+
+Use {\tt G92} to indicate that the given values should be used as the
+current coordinates under a new PRZ. For example, 
 \begin{verbatim}
 G92 X1.000 Y-1.000 Z2.000
 \end{verbatim}
-resets the PRZ so that the cutter's current location is given
+means to reset the PRZ so that the cutter's current location is given
 by $(1,-1,2)$. Saying 
 \begin{verbatim}
 G92 X0 Y0 Z0
 \end{verbatim}
 (or simply {\tt G92}, with no arguments) is a convenient way to make
 the current tool location the new PRZ.
-
-Most physical machines have a work offsets table that's used with the
-{\tt G54-G59} commands. Work offsets are often used as a way to
-partition the tool table so that each partition has its own local
-coordinate system, with the code for different parts running more or
-less independently in each partition. This can be handy in a
-production environment. \ger\ has a work offets table, even though it
-seems less useful in a translator. 
-
-The {\tt G54-G59} commands work in a manner similar to {\tt G52}, except
-that the arguments come from the work offsets table. That is, {\tt
-  G54} (no arguments) is the same as
-\begin{verbatim}
-G52 Xx Yy Zz
-\end{verbatim}
-where {\tt x, y} and {\tt z} are taken from the work offsets table. 
 
 \subsection{Tool Length Offset}
 

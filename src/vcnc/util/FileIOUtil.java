@@ -565,6 +565,7 @@ public class FileIOUtil {
       PrintStream out = new PrintStream(fileOutput);
       out.print(s);
       out.close();
+      fileOutput.flush();
       fileOutput.close();
     } catch (Exception e) {
       System.out.println("Problem saving text to file at " 

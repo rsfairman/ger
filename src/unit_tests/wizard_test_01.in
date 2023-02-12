@@ -10,7 +10,7 @@ SimpleWiz takes no arguments
 O123
 
 G00
-X1.0 Y1.0 F14
+X1.0 Y1.0 F14 (Intended error: can't give feed rate in rapid travel mode)
 SimpleWiz
 G01
 X22.0

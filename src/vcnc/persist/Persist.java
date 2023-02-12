@@ -15,6 +15,8 @@ it uses whatever you choose.
 
 BUG: Maybe there should be a "go back to the default machine" choice.
 
+BUG: Looks like there's not a lot of code for persistence. Put this
+back in the main vcnc package or somewhere else.
 
 
 The data that persists is:
@@ -80,8 +82,9 @@ import java.net.URLClassLoader;
 
 import javax.swing.JOptionPane;
 
-import vcnc.tpile.MachineState;
+import vcnc.tpile.DefaultMachine;
 import vcnc.util.FileIOUtil;
+import vcnc.workoffsets.WorkOffsets;
 
 
 public class Persist {
@@ -109,6 +112,7 @@ public class Persist {
   // these names.
   // BUG: Maybe not the best file name.
   private static String inchName = "inch.txt";
+  private static String woName = "workoffsets.txt";
   
   // You'd think that it would work to declare 
   // public static String gerDir = loadGerDirLoc();
@@ -185,15 +189,15 @@ public class Persist {
     if (s == null)
       {
         // File was never created. Defaults to inch.
-        MachineState.machineInchUnits = true;
+        DefaultMachine.inchUnits = true;
         return;
       }
     
     // Either 'inch' or 'mm'.
     if (s.equals("inch"))
-      MachineState.machineInchUnits = true;
+      DefaultMachine.inchUnits = true;
     else if (s.equals("mm"))
-      MachineState.machineInchUnits = false;
+      DefaultMachine.inchUnits = false;
     else
       {
         // Maybe the user tried to edit the file himself and made a mistake.
@@ -214,12 +218,56 @@ public class Persist {
     
     // Reverse of loadInch().
     String theText = null;
-    if (MachineState.machineInchUnits == true)
+    if (DefaultMachine.inchUnits == true)
       theText = "inch";
     else
       theText = "mm";
     
     FileIOUtil.saveStringAsAscii(gerDir,inchName,theText);
+  }
+
+  private static void loadWorkOffsets() {
+    
+    // The work offsets is an array of 6 x/y/z coordinates, expressed
+    // as text.
+
+    String s = FileIOUtil.loadFileToString(gerDir,woName);
+    if (s == null)
+      // File was never created. Allow to default to all zeros.
+      return;
+    
+    String[] lines = s.split("\n");
+    for (int i = 0; i < lines.length; i++)
+      {
+        String[] vs = lines[i].split(" ");
+        for (int j = 0; j < 3; j++)
+          {
+            try {
+              DefaultMachine.workOffsets.offset[i][j] = Double.parseDouble(vs[j]);
+            } catch (Exception e) {
+              // Shouldn't be possible, but...
+              System.err.println(
+                  "Parse error when loading persistent work offsets.");
+            }
+          }
+      }
+  }
+  
+  private static void saveWorkOffsets() {
+    
+    // Reverse of loadWorkOffsets().
+    StringBuffer sbuf = new StringBuffer();
+    for (int i = 0; i < WorkOffsets.Rows; i++)
+      {
+        for (int j = 0; j < WorkOffsets.Cols; j++)
+          {
+            String v = String.format("%.3f",DefaultMachine.workOffsets.offset[i][j]);
+            sbuf.append(v).append(" ");
+          }
+        sbuf.append("\n");
+      }
+
+    FileIOUtil.saveStringAsAscii(gerDir,woName,sbuf.toString());
   }
   
   private static void loadSettings() {
@@ -228,6 +276,7 @@ public class Persist {
     // before running any G-code through the transpiler. Call this when the
     // program launches, or whenever the user changes the .ger directory.
     loadInch();
+    loadWorkOffsets();
   }
   
   public static void reload() {
@@ -259,10 +308,12 @@ public class Persist {
     // Save the persistent aspects of the MachineState. Everything in 
     // MachineState is static, so no argument (which is not ideal).
     
-    // BUG: The only thing being saved at this point is the inch/mm choice.
+    // BUG: Save tool table and ???
     
     saveInch();
+    saveWorkOffsets();
     
+
     
     
     
