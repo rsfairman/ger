@@ -1,4 +1,4 @@
-N00004	M98 P00124 L0004
-N00004	ERROR	Error on line 4: no such sub-program was defined
-N00006	G00
-N00007	X+01.000	Y+01.000	
+M98 P124 L4
+Error on line 4: no such sub-program was defined
+G00
+X1.0000 Y1.0000 

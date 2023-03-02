@@ -1,0 +1,195 @@
+
+Use Notes
+---------
+
+This should work, even though it far from the intended final
+result. It should be fairly self-explanatory. Open a file that contains G-codeSee docs/manual.pdf for an overview of the G-codes.
+
+The translator will take input G-code and do two things: 
+
+
+* It expands ordinary G-code sub-programs based on M98 and M99.
+* It allows for wizards, although these wizards may only use the G00,
+  G01 and linear moves.
+
+Everything else should simply pass through the translator unchanged.
+
+---------------
+
+If you're not running with an IDE, you can run with
+
+java -jar ger.jar
+
+This accepts various arguments. See Main.handleCLI(). With no
+arguments, it will launch the GUI; or say
+
+java -jar ger.jar gui
+
+---------------
+
+Various aspects of the program depend on data that persists between
+launches. By default, this data is found in
+
+System.getProperty("user.dir")/.ger
+
+so, wherever you launch the program from. You can change this
+directory with
+
+java -jar ger.jar change "whatever directory"
+
+It uses the *given* directory, not a sub-directory called '.ger' even
+though I will refer to "the .ger directory" as the generic name for
+whatever the actual path may be. The command is called 'change'
+because you are effectively changing the overall machine setup (tool
+table, etc.)
+
+It's easy to get mixed up about where this points, so
+
+java -jar ger.jar change 
+
+(no specified directory) will tell you which directory is being used.
+
+Currently, what you'll find in the .ger directory are the *.java and
+*.class files for wizards, plus the 'inch.txt' file. More on wizards
+below.
+
+The 'inch.txt' file is a single line to indicate whether the
+virtual machine works internally in inches or mm. This can be set (and
+it persists) from the GUI, under Settings->Machine Settings. Eventually,
+the .ger directory will also hold information about the tool table and
+work offsets table (and maybe other things -- not sure).
+
+---------------
+
+To run the unit tests, say
+
+java -jar ger.jar test "where"
+
+The program needs to be able to find these tests, and "where" should
+be the directory with the test files.
+
+I have not created many of these test files, and the tests that do
+exist are essentially bogus. The intent was to "test the tester," not
+test the logic of the translator.
+
+The test framework only has "slots" for testing the Lexer and Parser 
+layers. Adding more tests for the Lexer and Parser requires adding the
+names of the tests to UnitTests.java, in the lexTests and parseTests
+arrays (and creating the input G-code files, obviously). Adding new
+categories of tests, for Layer0A say, requires adding a method,
+similar to testLexer() and testParser(), and calling it from
+UnitTests.testAll(). 
+
+---------------
+
+To *use* this thing, as one normally would, say
+
+java -jar ger.jar translate "the file"
+
+(or use the GUI). The result will go to stdout. It translates by
+applying the Lexer, the Parser, then
+
+* Layer0A, to handle certain "machine directives," like changing the
+  tool table or the presumed units of the machine (inch/mm), for only
+  the current G-code input, rather than as a global change to the
+  persistent machine. Although this layer is in place, it would be
+  premature (IMO) to implement any particular machine directives wince
+  the whole concept of "the machine" hasn't been fleshed out.
+* Layer0B, to expand wizards
+* Layer00, to elminate ordinary sub-programs (M98 and M99)
+
+If you want to see the output up to a specific layer, use the GUI, and
+choose from the 'Test' menu. There's no way to use the CLI to stop the
+translation to a specific layer. It could be added, but doesn't seem
+useful. 
+
+---------------
+
+Wizards...
+
+Wizards are intended to be compiled from the CLI, although the GUI will
+attempt to compile them too. Under the GUI, if compilation fails, then
+it merely reports the failure. As we discussed, this program is not
+the place to compose or debug Java.
+
+To compile a wizard, put the *.java file into the .ger directory and say
+
+java -jar ger.jar compile "the *.java file name"
+
+It should generate the *.class file in the .ger directory. Errors are
+reported to stdout (or maybe stderr -- haven't checked).
+
+There's an example wizard in the wizard_test package: SimpleWiz. What
+matters is that it must extend vcnc.wizard.WizardBase, and it must
+belong to the wizard_test package. In particular, define the
+definiton() method by making a series of calls to any of 
+
+G00() -- output 'G00'
+G01() -- output 'G01'
+Move() -- see below
+
+The Move() method returns a MoveMaker object which has methods of its
+own, one for each element that could appear in a move. So, to output
+X1.0 Y2.0
+you'd say
+Move().X(1.0).Y(2.0),
+or any combination of successive calls to X(), Y(), Z() and F() (for
+feed rate).
+
+The person writing the wizard doesn't need to understand anything
+about MoveMaker other than the fact that it's used as above.
+
+I have not provided other methods or classes in WizardBase, partly
+because I want to see what you think and whether this seems natural or
+you can come up with a better approach. If we use this general
+framework, it wouldn't be hard to write an ArcMaker class that works
+just like MoveMaker, but for G02/G03. Most of the other methods will be
+a simple matter of outputing a single G/M-code, with no arguments.
+
+To use a wizard from your G-code, refer to it by the class name, and
+the arguments to the wizard take up everything up to the EOL where the
+wizard appears. Thus, if you compiled BoltCircle.java, then to use it,
+you might say
+
+BoltCircle 5.00 6 30.0
+
+where 5.00 is the radius, with 6 holes and the first one at 30 degrees
+from the vertical (or however you've set up the arguments). Text
+arguments are permitted, enclosed in double-quotes. The arguments come
+into the definition() method as an ArrayList<Object>, where the
+entires are either Double or String. Integer values, like the '6' in
+the example above, are converted to double type. 
+
+---------------
+
+The Code...
+
+You are most welcome (!) to find bugs or problems anywhere, but here's
+a list of the things you are most likely to want to look at, either
+because there's a problem or simply to understand.
+
+vcnc.Main
+vcnc.MainWindow
+vcnc.WizCompile
+
+vcnc.persist.Persist
+
+vcnc.tpile.lex.Lexer
+vcnc.tpile.parse.Parser
+vcnc.tpile.Layer0A
+vcnc.tpile.Layer0B
+vcnc.tpile.Layer00
+
+vcnc.unittest.UnitTest
+
+vcnc.wizard.WizardBase
+
+wizard_test.SimpleWiz
+
+The items above are most directly related to the central purpose of
+the program. A couple other broad topics that you might look at are
+
+* The entire Swing setup. I like Swing, but sometimes....
+
+* The run-time compiling setup. A lot of what I've done feels hacky.
+

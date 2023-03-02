@@ -7,6 +7,9 @@
 % Need this for pmatrix (among other things).
 \usepackage{amsmath}
 
+% To use \mathbb for blackboard bold fonts.
+\usepackage{amssymb}
+
 % Needed to include graphics objects (from metapost).
 \usepackage{graphics}
 
@@ -247,6 +250,325 @@ with the lexer, is able to produce output as text (a {\tt
   String}). Each test is specified by an input file, which is run
 through the translator up to a certain level. The output from this run
 is compared to a static text file to see if they match.
+
+\section{Geometry}
+
+There are a few geometric problems that come up. 
+
+\subsection{Arc Centers}
+
+One problem is that we have two end-points of an arc and the radius,
+and we need to know the center. This arises in the {\tt ArcCurve}
+class; see {\tt calcCenter()}. Work in the $xy$-plane. Let the two
+end-points be $(x_0,y_0)$ and $(x_1,y_1)$, with radius $r$, and the
+center be at $(c_x,c_y)$. We want to determine the center given the
+other values.
+
+We have two equations and two unknowns:
+\begin{eqnarray*}
+  r^2 &=& (x_0-c_x)^2 + (y_0-c_y)^2 \\
+  r^2 &=& (x_1-c_x)^2 + (y_1-c_y)^2
+\end{eqnarray*}
+Solve the first equation for $c_x$:
+\begin{eqnarray*}
+  (x_0-c_x)^2 &=& (y_0-c_y)^2 - r^2\\
+  x_0-c_x &=& \pm\sqrt{(y_0-c_y)^2 - r^2}\\
+  c_x &=& x_0 \mp\sqrt{(y_0-c_y)^2 - r^2}
+\end{eqnarray*}
+Substitute that into the second equation and solve for $c_y$:
+\begin{eqnarray*}
+  r^2 &=& (x_1-c_x)^2 + (y_1-c_y)^2 \\
+  r^2 &=& \left(x_1-\left(x_0 \mp\sqrt{(y_0-c_y)^2 - r^2}\right)\right)^2 + (y_1-c_y)^2 \\
+  r^2 &=& \left(x_1-x_0 \pm\sqrt{(y_0-c_y)^2 - r^2}\right)^2 + (y_1-c_y)^2 \\
+  r^2 &=& (x_1-x_0)^2 \pm 2(x_1-x_0)\sqrt{(y_0-c_y)^2 - r^2} +
+  (y_0-c_y)^2 - r^2 + (y_1-c_y)^2 
+\end{eqnarray*}
+
+Solving that for $c_y$ might work, but it's sort of
+horrifying. Instead, use the fact that a line perpendicular to a chord
+of the arc must pass through the center. That is, there is a chord
+passing through $(x_0,y_0)$ and $(x_1,y_1)$. Let $(m_x,m_y)$ be the
+mid-point of that chord. The slope of the chord is given by
+$$s = {y_1-y_0\over x_1-x_0}$$
+(and the order of the $x_i$ and $y_i$ doesn't matter). The slope of
+the perpendicular to the chord is $-1/s$ or
+$$s = {x_0-x_1\over y_1-y_0}$$
+and the line perpendicular to the chord is given by
+$$y - y_0 = \left({x_0-x_1\over y_1-y_0}\right) (x-x_0).$$
+In particular, the center of the circle lies on this line, so we must
+have
+$$c_y - y_0 = \left({x_0-x_1\over y_1-y_0}\right) (c_x-x_0).$$
+
+Let's simplify this mess...This is closer to what appears in the code. Define
+\begin{eqnarray*}
+  d_x &=& x_0-x_1\\
+  d_y &=& y_0-y_1
+\end{eqnarray*}
+and
+\begin{eqnarray*}
+  m_x &=& (x_0+x_1)/2\\
+  m_y &=& (y_0+y_1)/2.
+\end{eqnarray*}
+The slope of the chord is then $s = d_y/d_x$ and the slope of the
+perpendicular is $-1/s$ or $-d_x/d_y$. The mid-point of the chord is
+at $(m_x,m_y)$ so that the equation for the perpendicular to the chord
+through the mid-point is given by
+$$y - m_y = (-d_x/d_y) (x-m_x)$$
+and we must have
+$$c_y - m_y = (-d_x/d_y) (c_x-m_x)$$
+or
+$$c_y = m_y - (d_x/d_y) (c_x-m_x).$$
+Substitute that into our first equation and get
+\begin{eqnarray*}
+  r^2 &=& (x_0-c_x)^2 + (y_0-c_y)^2 \\
+  r^2 &=& (x_0-c_x)^2 + \left(y_0-\left[m_y - (d_x/d_y) (c_x-m_x)\right]\right)^2 \\
+  r^2 &=& (x_0-c_x)^2 + \left[y_0-m_y + (d_x/d_y) (c_x-m_x)\right]^2.
+\end{eqnarray*}
+This is ugly, but it can be cleaned up. Substitute
+$$u = c_x-m_x$$
+and observe that $y_0-m_y = d_y/2$ and $x_0-m_x = d_x/2$. Then the
+above can be written as
+\begin{eqnarray*}
+  r^2 &=& (x_0-c_x)^2 + \left[y_0-m_y + (d_x/d_y) (c_x-m_x)\right]^2 \\
+  r^2 &=& (x_0-u-m_x)^2 + \left[d_y/2 + (d_x/d_y) u\right]^2 \\
+  r^2 &=& (d_x/2-u)^2 + \left[d_y/2 + (d_x/d_y) u\right]^2 \\
+  r^2 &=& (d_x/2)^2 -d_xu +u^2 + (d_y/2)^2 + d_xu + (d_x/d_y)^2 u^2 \\
+  r^2 &=& (d_x/2)^2 + (d_y/2)^2  + (1+(d_x/d_y)^2) u^2.
+\end{eqnarray*}
+Set $q^2= d_x^2+d_y^2$ and the above becomes
+\begin{eqnarray*}
+  r^2 &=& (d_x/2)^2 + (d_y/2)^2  + (1+(d_x/d_y)^2) u^2 \\
+  r^2 &=& q^2/4  + (q^2/d_y^2) u^2.
+\end{eqnarray*}
+Solve this for $u$:
+$$u = \pm{d_y\over q}\sqrt{r^2-q^2/4}$$
+and then
+$$c_x = m_x \pm{d_y\over q}\sqrt{r^2-q^2/4}$$
+and
+$$c_y = m_y - {d_x\over d_y}(c_x-m_x) = m_y \mp{d_x\over q}\sqrt{r^2-q^2/4}.$$
+
+
+\vskip 2cm
+
+THE BELOW IS WRONG. 
+
+
+Let's simplify this mess...This is closer to what appears in the code. Define
+\begin{eqnarray*}
+  m_x &=& x_0-x_1\\
+  m_y &=& y_0-y_1.
+\end{eqnarray*}
+The slope of the chord is then $s = m_y/m_x$ and the slope of the
+perpendicular is $-1/s$ or $-m_x/m_y$. The perpendicular goes through
+the mid-point of the chord, so it has equation
+$$y - y_0 = (-m_x/m_y) (x-x_0),$$
+The equation of the perpendicular is
+$$y - y_0 = (-m_x/m_y) (x-x_0),$$
+and we must have
+$$c_y - y_0 = (-m_x/m_y) (c_x-x_0),$$
+or
+$$c_y  = y_0 - (m_x/m_y) (c_x-x_0).$$
+Substitute that into our first equation and get
+\begin{eqnarray*}
+  r^2 &=& (x_0-c_x)^2 + (y_0-c_y)^2 \\
+  r^2 &=& (x_0-c_x)^2 + \left(y_0-\left[y_0 - (m_x/m_y) (c_x-x_0)\right]\right)^2 \\
+  r^2 &=& (x_0-c_x)^2 + \left((m_x/m_y) (c_x-x_0)\right)^2 \\
+  r^2 &=& (x_0-c_x)^2\left(1 + (m_x/m_y)^2\right) \\
+  r^2 &=& (x_0-c_x)^2\left({m_x^2+m_y^2\over m_y^2}\right)
+\end{eqnarray*}
+so that
+\begin{eqnarray*}
+  (x_0-c_x)^2 &=& r^2 \left({m_y^2\over m_x^2+m_y^2}\right) \\
+  x_0-c_x &=& \pm r \left({m_y\over \sqrt{m_x^2+m_y^2}}\right)
+\end{eqnarray*}
+or
+\begin{eqnarray*}
+  c_x &=& x_0 \mp r \left({m_y\over \sqrt{m_x^2+m_y^2}}\right)
+\end{eqnarray*}
+and plug that into the equation for $c_y$ too:
+\begin{eqnarray*}
+  c_y &=& y_0 - (m_x/m_y) (c_x-x_0) \\
+  &=& y_0 - {m_x\over m_y} \left(x_0 \mp r \left({m_y\over
+    \sqrt{m_x^2+m_y^2}}\right) - x_0\right) \\
+  &=& y_0 \pm {m_x\over m_y} \left({m_yr \over \sqrt{m_x^2+m_y^2}}\right) \\
+  &=& y_0 \pm {m_xr \over \sqrt{m_x^2+m_y^2}}
+\end{eqnarray*}
+
+\subsection{Arc Extent}
+
+Given an arc move, we need to know the maximum extent of travel. That
+is, the maximum and minimum values for $x$, $y$ and $z$. See {\tt
+  ArcCurve.noteMaxMin()}. Assuming an arc in the $XY$-plane, it is
+given in parametric terms as 
+$$(x(t),y(t)) = (c_x,c_y) + r(\cos t,\sin t),$$
+where $t$ ranges over some portion of the interval $[0,2\pi]$, and
+this internval may ``wrap around,'' so it may be best to think of $t$
+as being over an arbitrary interval. We want to know the maximum and
+minimum values for $x$ and $y$; the value of $t$ where this happens
+isn't important.
+
+These extrema occur either at an end-point, or at a place where the
+first derivative is zero. We have
+$$(x^\prime(t),y^\prime(t)) = r(-\sin t,\cos t),$$
+So the extrema in $x$ may be when $t$ is a multiple of $\pi$, and the
+extrema in $y$ may be when $t$ is a an odd multiple of $\pi/2$ -- when
+$t = (2k+1)\pi/2$, for $k\in\mathbb{Z}$.
+
+\subsection{Arc Approximation}
+
+Working with linear moves is easier than arcs, but if line segments
+are used to approximate arcs, then it's important to have some measure
+of the error. Consider the chord of a circle of radius $r$. Imagine
+this chord being vertical through $(r,0)$.\footnote{Really need a
+diagram.} Let $x$ be the distance from the center to the chord and $e$
+be the distance from the chord to the circle (so $e$ is the
+error). You have two triangle around the $x$-axis, and let $y$ be the
+height of one of these triangles. So the length of the chord is
+$2y$. We have $r=x+e$ and $r^2=x^2+y^2$. Take $r$ as given, along with
+$y$ as a particular length for the chord. We have
+$$x = \sqrt{r^2-y^2}$$
+so that
+$$e = r -\sqrt{r^2-y^2}.$$
+Rearrange:
+\begin{eqnarray*}
+  e &=& r -\sqrt{r^2-y^2}\\
+  r-e &=& \sqrt{r^2-y^2}\\
+  (r-e)^2 &=& r^2-y^2\\
+  r^2-2re+e^2 &=& r^2-y^2\\
+  e^2-2re + y^2 &=& 0,
+\end{eqnarray*}
+So that
+$$e = {2r\pm\sqrt{4r^2-4y^2}\over2}.$$
+DUH, same as before. Think in terms of the angle. Let the angle
+subtended by the arc be $2\alpha$ so that $y=r\sin\alpha$. Then
+$$e = r -\sqrt{r^2-r^2\sin^2\alpha} = r(1-\cos\alpha).$$
+If we want $e$ to be no more than a certain size, then we must choose
+$\alpha$ so that
+$$\cos\alpha \geq 1-e/r.$$
+For small $\alpha$, $\cos\alpha\approx 1-\alpha^2/2$ (Taylor series),
+so
+\begin{eqnarray*}
+  1-\alpha^2/2 &\geq& 1-e/r \\
+  \alpha^2 &\leq& 2e/r \\
+  \alpha &\leq& \sqrt{2e/r}
+\end{eqnarray*}
+and $\alpha$ needs to be pretty darn small if $e$ is anything
+reasonable. On the other hand, it's not that bad. If $r=1$, then
+$2e/r$ around $0.010$ is pretty tight, which would give $\alpha =
+0.1$. So you'd need $31.4$ chords around the circle. If $r=10$, then
+the same estimates leads to 99 chords, which is still not crazy.
+If $e$ is very tight, so that $2e/1$ is $0.0005$ ($e = 0.001$), then a
+circle of radis 1 needs 140 chords and a circle of radius 10 needs 444
+chords.
+
+The question will be whether it's possible to save a significant
+more calculation by working with linear moves or with arc moves.
+
+\section{Rendering}
+
+\subsection{Scale}
+
+The biggest reason to include a concept of scale is for rendering: the
+coarser the scale, the fewer positions to consider. In 3D, this works
+by the cube of the change in scale, so this is a big factor. For
+example, changing the scale from $0.001$~in to $0.005$~in will hardly
+matter in terms of what the user sees, but the number of voxels in a
+given volume goes down by a factor of 125. This can make the
+difference between an imperceptable wait for a result and an
+annoyingly long wait.
+
+There is a tension between converting to a given scale earlier or
+later. Rendering is done by breaking ``cuts'' into convex volumes, and
+letting the coordinates that define these volumes remain at high
+resolution until the last step of rendering, where it's determined
+whether a voxel is inside or outside a given cut, is more
+accurate. However, if arc moves are converted to linear moves, then
+how that is done should be influenced by the scale.
+
+As a compromise, non-linear moves are converted to a sequence of
+linear moves at high resolution, and any coarsening of the scale is
+delayed until the rendering step. In fact, there seems to be no
+downside to expressing all moves at maximum accuracy and only
+considering the scale when quantizing to voxels. In theory, it might
+be possible to come up with some case where the linear moves used to
+approximate an arc would be better chosen if the scale is taken into
+account, but these cases seem odd and unlikely.
+
+
+\subsection{Other Stuff}
+
+In a lot of ways, rendering an image is the hardest
+problem. Translation itself took time to implement because there were
+certain decisions to make about coordinate systems and edge cases to
+consider, but it was pretty clear and the algorithms aren't that
+complicated. For 3D rendering, we are a lot closer to the edge of what
+we have the horsepower to accomplish.
+
+There are several ways to approach the problem if displaying some kind
+of image that represents the part being cut.
+\begin{enumerate}
+\item Plain 2D, in black and white.
+\item 2D with depth.
+\item 2D with depth and surface normals.
+\item 3D of some kind.
+\end{enumerate}
+Many of these could be done using either an ordinary array or a
+quadtree/octree.
+
+The plain 2D case is just an array (or quadtree) where the tool either
+touches/cuts the material or it doesn't. Any time the tool descends
+below $z=0$, there's a black pixel.
+
+The ``2D with depth'' case is similar, but with something like a
+z-buffer. For each pixel (whether that pixel is in an array or a
+quadtree), there's a value for the maximum depth of cut seen over the
+entire G-code program. Surface normals can be added by having two
+arrays or quadtrees, one with the depth and one with these
+normals. That takes considerably more memory -- at least four times as
+much.
+
+I'm not sure what the best way is to do the fully 3D case, but it
+needs to be done if concave cutters or a 4th axis is to be dealt
+with. I'm leaning toward octrees. I want something that doesn't
+require a GPU to work, and I would prefer not to mess with a GPU at
+all. OTOH, using a GPU might not be that difficult.
+
+\subsection{Speed}
+
+The simplest and most obvious way to deal with the 2D cases is to
+think of the tool as cutting a certain circular pattern, and move this
+pattern one pixel at a time and update the array over the entire
+circle. Thus, if the cutter has radius $0.25$~in, then you have a
+circle of area $0.125^2\pi$ or roughly 50,000 square thousandths. If
+the cutter moves an inch, then that is 1,000 individual steps and
+you'd have $50,000\times 1,000$ or $50,000,000$ individual positions to
+check. More generally, if the tool has radius $r$ and it moves
+distance $d$, both expressed in terms of the rendering resolution
+(like thousandths), then you have to consider $\pi r^2d$ individual
+positions/voxels.
+
+The above is too much. The cutter's total distance of travel will
+typically be large (many inches). Let $u$ be the scale or rendering
+resolution, expressed in multiples of one thousandth (or whatever the
+basic unit of the machine may be). Let $t$ be the total distance
+travelled by the cutter over an entire program, in thousandths. Then
+we're looking at $\pi (r/u)^2 (t/u)$. Assume $r=2^8$ (roughly a
+half-inch cutter) and $t$ could be $2^{10}$ inches or $2^{20}$ total
+units travelled. So, overall, we have something like $2^{38}/u^3$
+voxels to visit. Obviously, letting $u$ be something like 4 or 8 would
+help a lot, but it's still too much.
+
+This can be reduced by adding a slight complication. Instead
+of considering all the voxesl of the cutter at each position, consider
+only those voxels on the leading edge of travel. For an ordinary
+end-mill, this changes from requiring that the area of the cutter be
+considered to only the perimeter. The savings is less for something
+like a ball-mill or v-cutter; in those cases, the ``leading edge'' is
+really a leading surface, so the reduction is only by a factor of
+about one half. Then again, you could let the outer perimeter cut
+(like the semicircle in the vertical plane of a ball-mill), and at the
+two ends of the cut you would have to consider the hemispheres. So the
+savings is almost as large.
 
 
 

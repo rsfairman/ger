@@ -9,8 +9,7 @@ To test on the fly compilation
 
 import java.util.ArrayList;
 
-//import vcnc.tpile.parse.Statement;
-import vcnc.wizard.WizardBase;
+import ger.wizard.WizardBase;
 
 
 public class SimpleWiz2 extends WizardBase {

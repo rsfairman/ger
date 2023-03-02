@@ -10,5 +10,5 @@ module vcnc {
   requires java.prefs;
 	
   // So the class loader can find wizards that are dynamically loaded.
-  exports vcnc.wizard;
+  exports ger.wizard;
 }

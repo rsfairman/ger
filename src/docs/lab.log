@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.7.12)  7 NOV 2022 15:11
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.7.12)  2 MAR 2023 09:11
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -162,27 +162,28 @@ Overfull \hbox (10.43115pt too wide) in paragraph at lines 374--379
 form let-ter+something.
  []
 
-[6] [7] [8] (./lab.aux) ) 
+[6] [7] [8] [9] [10] (./lab.aux) ) 
 Here is how much of TeX's memory you used:
- 1605 strings out of 478024
- 25345 string characters out of 5842695
+ 1609 strings out of 478024
+ 25420 string characters out of 5842695
  334803 words of memory out of 5000000
- 20097 multiletter control sequences out of 15000+600000
- 472412 words of font info for 41 fonts, out of 8000000 for 9000
+ 20101 multiletter control sequences out of 15000+600000
+ 473017 words of font info for 43 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  54i,6n,62p,220b,227s stack positions out of 10000i,1000n,20000p,200000b,200000s
-{c:/texlive/2022/texmf-dist/fonts/enc/dvips/cm-super/c
-m-super-ts1.enc}<c:/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx
-12.pfb><c:/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><c
-:/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/texlive/
-2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/texlive/2022/texm
-f-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb><c:/texlive/2022/texmf-dist/fo
-nts/type1/public/amsfonts/cm/cmtt10.pfb><c:/texlive/2022/texmf-dist/fonts/type1
-/public/cm-super/sfrm1000.pfb>
-Output written on lab.pdf (8 pages, 111215 bytes).
+{c:/texlive/2022/texmf-dist/fonts/enc/dvips/c
+m-super/cm-super-ts1.enc}<c:/texlive/2022/texmf-dist/fonts/type1/public/amsfont
+s/cm/cmbx12.pfb><c:/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi
+10.pfb><c:/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:
+/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb><c:/texlive/20
+22/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/texlive/2022/texmf-
+dist/fonts/type1/public/amsfonts/cm/cmti10.pfb><c:/texlive/2022/texmf-dist/font
+s/type1/public/amsfonts/cm/cmtt10.pfb><c:/texlive/2022/texmf-dist/fonts/type1/p
+ublic/cm-super/sfrm1000.pfb>
+Output written on lab.pdf (10 pages, 129384 bytes).
 PDF statistics:
- 67 PDF objects out of 1000 (max. 8388607)
- 42 compressed objects within 1 object stream
+ 78 PDF objects out of 1000 (max. 8388607)
+ 49 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

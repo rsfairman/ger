@@ -9,7 +9,7 @@ A trivial wizard to test the framework.
 
 import java.util.ArrayList;
 
-import vcnc.wizard.WizardBase;
+import ger.wizard.WizardBase;
 
 
 public class SimpleWiz extends WizardBase {

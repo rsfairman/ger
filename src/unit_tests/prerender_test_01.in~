@@ -1,0 +1,21 @@
+(
+Simple test to see if arcs are made into line segments properly.
+)
+
+O123
+
+G01
+X1 Y1 F10.0
+G02 X1 Y2 R0.50
+(
+X2 Y2
+G02 X2.50 Y2.50 R0.70
+X4 Y3
+G03 X4.25 Y3.50 R1.0
+G03 X2 Y3 R4.5
+G03 X6 Y1 R8
+X7 Y8
+)
+
+
+M30

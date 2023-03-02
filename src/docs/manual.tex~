@@ -139,7 +139,12 @@ will move to that position in rapid mode.\\
 &Circular interpolation. If an arc is specified using {\tt R} rather than {\tt
   I/J/K}, then a positive {\tt R}-value produces an arc that subtends
 less than $180^\circ$; using a negative {\tt R}-value produces an arc
-that's more than $180^\circ$.\\
+that's more than $180^\circ$. See Smid, p. 253. \\
+&Remember how helical milling works. Basically, one of the coordinates
+is the odd man out; normally (in the XY-plane/{\tt G17}) the ``extra''
+coordinate is Z. In that case, any Z-value given with a {\tt G02/03}
+is a linear move so that the overall move is helical. Of course, that
+assumes that the target machine interprets this the same way.\\
 &Also, various machines may treat the ZX plane slightly
 differently, depending on whether they are ``standard'' or ``vertical
 machining.'' So, {\tt G02} and {\tt G03} may be treated in opposite
@@ -159,6 +164,10 @@ and it will assume that the radius of the circle is equal to the
 larger of these two distances.\\
 {\tt G15}&Polar coordinates off.\\
 {\tt G16}&Polar coordinates on. \\
+& I'VE CHANGED THIS. Really, polar coordinates are inherently an
+incremental concept. If you wanted to use them in absolute mode, the
+only reasonable way to do so would be relative to machine zero, and
+that would be strange.\\
 &You may enter polar coordinate mode while in incremental mode
 ({\tt G91}) or you may enter incremental mode after invoking {\tt
   G16}, or go back to absolute mode ({\tt G90}). Not every real-world CNC
@@ -171,6 +180,7 @@ in polar coordinate mode is \emph{not} allowed.\\
 {\tt G19}& Work in the YZ-plane.\\
 & While in cutter comp mode, only the standard XY-plane may be
 used. This is typical for real-world controllers.\\
+& I NEED TO EXPLAIN A LITTLE ABOUT WHY THAT IS.\\
 {\tt G20}&Inches.\\
 {\tt G21}&Millimeters.\\
 & Ger works internally using either inches of millimeters, but you can

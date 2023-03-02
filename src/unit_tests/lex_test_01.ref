@@ -1,12 +1,12 @@
-3	error	Lexical error on line 3: use of '(' inside comments not allowed.
+3	error	use of '(' inside comments not allowed.
 3	extern	like
-3	error	Lexical error on line 3: malformed number in argument to wizard
+3	error	malformed number in argument to wizard
 5	;
 5	extern	There
-5	error	Lexical error on line 5: malformed number in argument to wizard
+5	error	malformed number in argument to wizard
 6	extern	looks
-6	error	Lexical error on line 6: malformed number in argument to wizard
-7	error	Lexical error on line 7: unknown code: )
+6	error	malformed number in argument to wizard
+7	error	unknown code: ')'
 8	;
 9	;
 9	O	123	0.0

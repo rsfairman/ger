@@ -440,10 +440,109 @@ to toggle line numbers.
 
 I have been working on this, but somehow not really updating this
 document. There was a bit of a break while I tinkered with Haskell,
-but progress is pretty good. Now up to version {\tt v14}. 
+but progress is pretty good. Now up to version {\tt v14}. Part of
+the reason I'm not using this -- I think -- is that what I need to do
+is pretty well understood since I've been down this road
+before. There's not a lot of planning or options to explore.
 
+\section{Feb 14, 2023}
 
-\section{August 8, 2022}
+Now I do have some planning...how to provide a graphical
+representation of what is being cut. A mistake I made in the
+``ancient'' versions was throwing away old things when I tried new
+things. Old code wasn't erased from storage, but the various methods
+weren't usually available simultaneously from the program. What I want
+to do this time is ``sneak up'' on various approaches, while each of
+them remains accessible to the program.
+
+This is likely to change, but here are some methods to implement.
+\begin{enumerate}
+\item Plain 2D, in black and white.
+\item 2D with depth.
+\item 2D with depth and surface normals.
+\item 3D of some kind.
+\end{enumerate}
+Look at the ``ancient'' code, where I made various stabs at these. The
+one in {\tt G-code Interpreter} seems to be the one with the most
+variety, with a focus on the 3D case, inclusing things that probably
+aren't the right approach, like BSPs and Gouraud shading. I took what
+I then thought were the best ideas and used them in {\tt qt dev}
+version, and then (I think, maybe) I went to the {\tt   revived}
+version (in Java).
+
+The plain 2D case is just an array (or quadtree) where the tool either
+touches/cuts the material or it doesn't. Any time the tool descends
+below $z=0$, there's a black pixel. I could do this once, where you
+simply follow the tool path (the cutter is one voxel) and again, where
+the cutter has some extent. 
+
+The ``2D with depth'' case is similar, but with something like a
+z-buffer. For each pixel (whether that pixel is in an array or a
+quadtree), there's a value for the maximum depth of cut seen over the
+entire G-code program. Surface normals can be added by having two
+arrays or quadtrees, one with the depth and one with these
+normals. That takes considerably more memory -- at least four times as
+much, though maybe less if I restrict the surface normals to being
+given by three bytes.
+
+I'm not sure what the best way is to do the fully 3D case, but it
+needs to be done if concave cutters or a 4th axis is to be dealt
+with. I'm leaning toward octrees. I want something that doesn't
+require a GPU to work, and I would prefer not to mess with a GPU at
+all. OTOH, using a GPU might not be that difficult.
+
+The crucial thing in the 3D case (and maybe in the 2D case too) is
+that the volumes being cut away must be convex. Obviously, not all
+cutters are convex, but you can express their volume as the union
+(maybe overlapping) of convex volumes. I suspect that restricting to
+certain basic shapes will allow the code to be tuned and made
+faster. These basic shapes would be something like cylinders and
+spheres. It might make sense to including things like hemispheres and
+oblate spheroids. The question is whether it is faster to consider
+fewer shapes that are harder to deal with -- the advantage of
+something like a sphere is how easy it is to tell whether a point is
+inside the sphere.
+
+\subsection*{Speed}
+
+The simplest and most obvious way to deal with the 2D cases is to
+think of the tool as cutting a certain circular pattern, and move this
+pattern one pixel at a time and update the array over the entire
+circle. Thus, if the cutter has radius $0.25$~in, then you have a
+circle of area $0.125^2\pi$ or roughly 50,000 square thousandths. If
+the cutter moves an inch, then that is 1,000 individual steps and
+you'd have $50,000\times 1,000$ or $50,000,000$ individual positions to
+check. More generally, if the tool has radius $r$ and it moves
+distance $d$, both expressed in terms of the rendering resolution
+(like thousandths), then you have to consider $\pi r^2d$ individual
+positions/voxels.
+
+The above is too much. The cutter's total distance of travel will
+typically be large (many inches). Let $u$ be the scale or rendering
+resolution, expressed in multiples of one thousandth (or whatever the
+basic unit of the machine may be). Let $t$ be the total distance
+travelled by the cutter over an entire program, in thousandths. Then
+we're looking at $\pi (r/u)^2 (t/u)$. Assume $r=2^8$ (roughly a
+half-inch cutter) and $t$ could be $2^{10}$ inches or $2^{20}$ total
+units travelled. So, overall, we have something like $2^{38}/u^3$
+voxels to visit. Obviously, letting $u$ be something like 4 or 8 would
+help a lot, but it's still too much.
+
+This can be reduced by adding a slight complication. Instead
+of considering all the voxesl of the cutter at each position, consider
+only those voxels on the leading edge of travel. For an ordinary
+end-mill, this changes from requiring that the area of the cutter be
+considered to only the perimeter. The savings is less for something
+like a ball-mill or v-cutter; in those cases, the ``leading edge'' is
+really a leading surface, so the reduction is only by a factor of
+about one half. Then again, you could let the outer perimeter cut
+(like the semicircle in the vertical plane of a ball-mill), and at the
+two ends of the cut you would have to consider the hemispheres. So the
+savings is almost as large.
+
+Instead of getting distracted by all the things I might do, implement
+the simplest possible case first and work up from there.
+
 \section{August 8, 2022}
 \section{August 8, 2022}
 \section{August 8, 2022}

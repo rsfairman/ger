@@ -1,53 +1,53 @@
-N00007	ERROR	Error on line 7: unexpected command -- D
-N00008	ERROR	Error on line 8: unexpected command -- F
-N00011	G00
-N00011	X+07.400	Y+03.300	
-N00014	G00
-N00014	ERROR	Lexical error on line 14: malformed X value
-N00014			Y+02.220	
-N00017	X+08.500			Z+02.200	
-N00020	ERROR	Lexical error on line 20: unknown code: x
-N00020	ERROR	Lexical error on line 20: unknown code: 4
-N00020	ERROR	Lexical error on line 20: unknown code: y
-N00020	ERROR	Lexical error on line 20: unknown code: 3
-N00023	ERROR	Error on line 23: unexpected command -- R
-N00026	ERROR	Error on line 26: unexpected command -- Q
-N00029	ERROR	Lexical error on line 29: unknown code: ^
-N00029	ERROR	Lexical error on line 29: unknown code: &
-N00029	ERROR	Lexical error on line 29: unknown code: 4
-N00032	G02 X+14.000	Y+08.000	Z+03.000			I+07.000	J+09.000	K+03.000	
-N00032	ERROR	Error on line 32: unexpected command -- R
-N00033	ERROR	Error on line 33: G02/03 improperly specified
-N00034	G02 X+01.000	Y+01.000	Z+01.000	R+17.000							F04.00 
-N00035	ERROR	Error on line 35: G02/03 improperly specified
-N00036	G02 X+01.000	Y+01.000	Z+01.000			I+04.000	J+08.000	K+09.000	
-N00037	G02 X+01.000	Y+01.000	Z+01.000			I+04.000	J+08.000			F11.00 
-N00038	G02 X+01.000	Y+01.000	Z+01.000			I+04.000	J+08.000			
-N00038	ERROR	Error on line 38: unexpected command -- R
-N00039	ERROR	Error on line 39: G02/03 improperly specified
-N00042	ERROR	Error on line 42: G41/42 not followed by H or D
-N00043	G41 D202
-N00044	ERROR	Error on line 44: G41/42 not followed by H or D
-N00045	G41 H03
-N00046	G42 D07
-N00049	G43  Z14.400000 H09
-N00050	G44  H08
-N00051	ERROR	Error on line 51: G43/G44 not followed by H register
-N00052	ERROR	Error on line 52: G43/G44 not followed by H register
-N00055	G52 
-N00056	G52 X+09.000	
-N00057	G52 X+09.000	Y+17.000	
-N00058	G52 X+01.000	Y+01.000	Z+01.000	
-N00059	ERROR	Error on line 59: two x-values
-N00062	ERROR	Error on line 62: unknown G-code: 89
-N00063	ERROR	Error on line 63: unknown G-code: 72
-N00067	M03 S 17
-N00067	ERROR	Lexical error on line 67: unknown code: .
-N00067	ERROR	Lexical error on line 67: unknown code: 4
-N00068	M04 S8000
-N00070	M06 T800
-N00071	ERROR	Error on line 71: bad tool change (M06 T?)
-N00073	ERROR	Error on line 73: bad spindle speed
-N00075	ERROR	Error on line 75: bad subroutine call (M98 P?)
-N00077	ERROR	Error on line 77: bad subroutine call (M98 P?)
-N00078	M04 S1000
+Error on line 7: unexpected command -- D
+Error on line 8: unexpected command -- F
+G00
+X7.4000 Y3.3000 
+G00
+Error on line 14: malformed X-value
+Y2.2200 
+X8.5000 Z2.2000 
+Error on line 20: unknown code: 'x'
+Error on line 20: unknown code: '4'
+Error on line 20: unknown code: 'y'
+Error on line 20: unknown code: '3'
+Error on line 23: unexpected command -- R
+Error on line 26: unexpected command -- Q
+Error on line 29: unknown code: '^'
+Error on line 29: unknown code: '&'
+Error on line 29: unknown code: '4'
+G02 X14.0000 Y8.0000 Z3.0000 I7.0000 J9.0000 K3.0000
+Error on line 32: unexpected command -- R
+Error on line 33: G02/03 improperly specified
+G02 X1.0000 Y1.0000 Z1.0000 R17.0000 F4.00 
+Error on line 35: G02/03 improperly specified
+G02 X1.0000 Y1.0000 Z1.0000 I4.0000 J8.0000 K9.0000
+G02 X1.0000 Y1.0000 Z1.0000 I4.0000 J8.0000 F11.00 
+G02 X1.0000 Y1.0000 Z1.0000 I4.0000 J8.0000
+Error on line 38: unexpected command -- R
+Error on line 39: G02/03 improperly specified
+Error on line 42: G41/42 not followed by H or D
+G41 D202
+Error on line 44: G41/42 not followed by H or D
+G41 H03
+G42 D07
+G43 Z14.4000 H09
+G44  H08
+Error on line 51: G43/G44 not followed by H register
+Error on line 52: G43/G44 not followed by H register
+G52
+G52 X9.0000
+G52 X9.0000 Y17.0000
+G52 X1.0000 Y1.0000 Z1.0000
+Error on line 59: two x-values
+Error on line 62: unknown G-code: 89
+Error on line 63: unknown G-code: 72
+M03 S17
+Error on line 67: unknown code: '.'
+Error on line 67: unknown code: '4'
+M04 S8000
+M06 T800
+Error on line 71: bad tool change (M06 T?)
+Error on line 73: bad spindle speed
+Error on line 75: bad subroutine call (M98 P?)
+Error on line 77: bad subroutine call (M98 P?)
+M04 S1000
